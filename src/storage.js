@@ -103,6 +103,13 @@ export function updateClub(id, updates) {
 export function getMembers() { return getList(KEYS.members) }
 export function getMembersByClub(clubId) { return getMembers().filter(m => m.clubId === clubId) }
 export function getMemberById(id) { return getMembers().find(m => m.id === id) || null }
+
+export function ensureMemberExists({ memberId, name, clubId, role }) {
+  if (getMemberById(memberId)) return
+  const member = { id: memberId, name, clubId, role, joinedAt: Date.now() }
+  saveList(KEYS.members, [...getMembers(), member])
+  fsWriteMember(member)
+}
 export function createMember({ name, clubId, role }) {
   const member = { id: uid(), name, clubId, role, joinedAt: Date.now() }
   saveList(KEYS.members, [...getMembers(), member])

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getCurrentUser, getUserMemberships, getClubById, getMembersByClub, clearCurrentUser, setCurrentClub } from '../storage'
+import { getCurrentUser, getUserMemberships, getClubById, getMembersByClub, clearCurrentUser, setCurrentClub, ensureMemberExists } from '../storage'
 import { syncMembershipsFromFirestore, syncClubFromFirestore, migrateLocalToFirestore } from '../sync'
 import Nav from '../components/Nav'
 
@@ -28,6 +28,8 @@ export default function ClubSelect() {
     // 기존 로컬 데이터를 Firestore로 먼저 올린 뒤 (최초 1회), 그 다음 내려받기
     await migrateLocalToFirestore(m.clubId)
     await syncClubFromFirestore(m.clubId)
+    // 혹시 sync 과정에서 멤버 레코드가 없어졌어도 복구
+    ensureMemberExists({ memberId: m.memberId, name: user.name, clubId: m.clubId, role: m.role })
     setCurrentClub({ clubId: m.clubId, memberId: m.memberId, role: m.role })
     navigate('/home', { replace: true })
   }
