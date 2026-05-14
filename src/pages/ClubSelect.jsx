@@ -62,6 +62,19 @@ export default function ClubSelect() {
           <div className="flex flex-col items-center py-16 gap-2 text-gray-400">
             <div className="text-5xl mb-2">📚</div>
             <p className="text-sm font-medium">아직 속한 북클럽이 없어요</p>
+            <button
+              onClick={() => {
+                setSyncing(true)
+                syncMembershipsFromFirestore(user?.userId).then(() => {
+                  setMemberships(getUserMemberships(user?.userId))
+                  setSyncing(false)
+                })
+              }}
+              disabled={syncing}
+              className="mt-2 text-xs text-blue-500 border border-blue-200 rounded-lg px-3 py-1.5 disabled:opacity-40"
+            >
+              {syncing ? '동기화 중…' : '🔄 다시 동기화'}
+            </button>
             <p className="text-xs">새 북클럽을 만들거나 초대 코드로 참여하세요</p>
           </div>
         ) : (

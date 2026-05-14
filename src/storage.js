@@ -5,7 +5,7 @@ import {
   fsWriteMeetingResponse, fsWriteNotice, fsDeleteNotice,
   fsWriteComment, fsDeleteComments, fsWriteVoteRound,
   fsUpdateVoteRound, fsWriteVoteCandidate, fsDeleteVoteCandidate,
-  fsUpdateVoteCandidate, fsToggleHeart, fsWriteMembership as _,
+  fsUpdateVoteCandidate, fsToggleHeart,
 } from './fsOps'
 
 const KEYS = {
@@ -49,7 +49,20 @@ export function getCurrentUser() {
   const user = get(KEYS.currentUser)
   if (!user) return null
   const club = get(KEYS.currentClub)
-  const userId = user.userId || user.memberId || user.id
+
+  // 항상 bc_users의 실제 id를 우선 사용 (memberId fallback 방지)
+  const allUsers = getList(KEYS.users)
+  const actualUser = allUsers.find(u =>
+    (user.userId && u.id === user.userId) ||
+    (!user.userId && u.nickname === user.name)
+  )
+  const userId = actualUser?.id || user.userId || user.memberId || user.id
+
+  // bc_current_user에 userId 없으면 자동 수정
+  if (userId && user.userId !== userId) {
+    set(KEYS.currentUser, { userId, name: user.name || user.nickname })
+  }
+
   return { userId, ...user, ...(club || {}) }
 }
 export function setCurrentUser(user) {
@@ -356,9 +369,17 @@ export function getUserMemberships(userId) {
   return direct
 }
 export function addMembership({ userId, clubId, memberId, role }) {
+  // 항상 bc_users의 실제 id 사용
+  const allUsers = getList(KEYS.users)
+  const actualUser = allUsers.find(u => u.id === userId || u.nickname === getCurrentUser()?.name)
+  const realUserId = actualUser?.id || userId
+
   const all = getMemberships()
-  if (all.find(m => m.userId === userId && m.clubId === clubId)) return
-  const m = { userId, clubId, memberId, role }
+  if (all.find(m => m.userId === realUserId && m.clubId === clubId)) return
+  const m = { userId: realUserId, clubId, memberId, role }
   saveList(KEYS.memberships, [...all, m])
   fsWriteMembership(m)
+
+  // 해당 클럽 migration 재실행 허용 (올바른 userId로 다시 씀)
+  localStorage.removeItem(`bc_migrated_${clubId}`)
 }

@@ -128,14 +128,35 @@ export async function syncUserFromFirestore(nickname, pin) {
 // ─── Memberships ───────────────────────────────────────────────────────────
 export async function syncMembershipsFromFirestore(userId) {
   try {
-    const q = query(collection(db, 'memberships'), where('userId', '==', userId))
-    const snap = await getDocs(q)
-    const ms = snap.docs.map(d => d.data())
-    if (ms.length > 0) {
-      const other = getKey(KEYS.memberships).filter(m => m.userId !== userId)
-      saveKey(KEYS.memberships, [...other, ...ms])
+    // 가능한 userId 후보들 (실제 id + 혹시 memberId로 잘못 저장된 경우 대비)
+    const candidates = new Set([userId])
+    const localUsers = getKey(KEYS.users)
+    localUsers.forEach(u => { if (u.id) candidates.add(u.id) })
+    const localMemberships = getKey(KEYS.memberships)
+    localMemberships.forEach(m => { if (m.memberId) candidates.add(m.memberId) })
+
+    const snaps = await Promise.all(
+      [...candidates].map(uid =>
+        getDocs(query(collection(db, 'memberships'), where('userId', '==', uid)))
+      )
+    )
+
+    const ms = snaps.flatMap(snap => snap.docs.map(d => d.data()))
+    // 중복 제거 (같은 clubId)
+    const seen = new Set()
+    const unique = ms.filter(m => {
+      if (seen.has(m.clubId)) return false
+      seen.add(m.clubId)
+      return true
+    })
+
+    if (unique.length > 0) {
+      const other = getKey(KEYS.memberships).filter(m =>
+        !unique.find(u => u.clubId === m.clubId)
+      )
+      saveKey(KEYS.memberships, [...other, ...unique])
     }
-    return ms
+    return unique
   } catch (e) {
     console.warn('[sync memberships]', e.message)
     return []
