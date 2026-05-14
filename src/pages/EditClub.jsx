@@ -109,7 +109,10 @@ export default function EditClub() {
               >
                 {ROLE_LABEL[m.role] || '멤버'}
               </button>
-              {user.role === 'superadmin' && m.id !== user.memberId && (
+              {/* 관리자: 일반멤버만 퇴장 / 슈퍼관리자: 모두 퇴장 가능 (자신 제외) */}
+              {m.id !== user.memberId &&
+               (user.role === 'superadmin' ||
+                (user.role === 'admin' && m.role === 'member')) && (
                 <button
                   onClick={() => kickMember(m)}
                   className="text-xs text-red-400 px-1.5 py-0.5 rounded-lg border border-red-200 ml-1"
