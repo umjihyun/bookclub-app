@@ -61,7 +61,7 @@ export default function NoticeDetail() {
   function handleSubmit() {
     if (!input.trim()) return
     const parentId = replyTo ? (replyTo.isReply ? replyTo.parentId : replyTo.id) : null
-    createComment({ postId: noticeId, parentId, authorId: user.memberId, content: input.trim() })
+    createComment({ postId: noticeId, parentId, authorId: user.memberId, content: input.trim(), clubId: user.clubId })
     setInput('')
     setReplyTo(null)
     refreshComments()

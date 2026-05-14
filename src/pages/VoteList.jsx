@@ -45,7 +45,7 @@ export default function VoteList() {
   }
 
   function handleHeart(candidateId) {
-    toggleHeart({ candidateId, memberId: user.memberId })
+    toggleHeart({ candidateId, memberId: user.memberId, clubId: user.clubId })
     forceUpdate(n => n + 1)
   }
 

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getUsers, createUser, verifyUser, setCurrentUser } from '../storage'
+import { syncUserFromFirestore } from '../sync'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -8,16 +9,21 @@ export default function Login() {
   const [pin, setPin] = useState('')
   const [error, setError] = useState('')
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     setError('')
     const name = nickname.trim()
     if (!name || pin.length !== 4) return
 
-    const existing = getUsers().find(u => u.nickname === name)
+    let existing = getUsers().find(u => u.nickname === name)
+
+    // 로컬에 없으면 Firestore에서 찾기 (다른 기기에서 가입한 경우)
+    if (!existing) {
+      const fromFirestore = await syncUserFromFirestore(name, pin)
+      if (fromFirestore) existing = fromFirestore
+    }
 
     if (existing) {
-      // 기존 유저 — PIN 확인
       const verified = verifyUser(name, pin)
       if (!verified) {
         setError('비밀번호가 맞지 않아요.')
@@ -25,7 +31,6 @@ export default function Login() {
       }
       setCurrentUser({ userId: verified.id, name: verified.nickname })
     } else {
-      // 신규 유저 — 자동 가입
       const user = createUser({ nickname: name, pin })
       setCurrentUser({ userId: user.id, name: user.nickname })
     }

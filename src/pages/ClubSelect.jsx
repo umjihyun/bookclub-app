@@ -1,16 +1,31 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCurrentUser, getUserMemberships, getClubById, getMembersByClub, clearCurrentUser, setCurrentClub } from '../storage'
+import { syncMembershipsFromFirestore, syncClubFromFirestore } from '../sync'
 import Nav from '../components/Nav'
 
 export default function ClubSelect() {
   const navigate = useNavigate()
   const user = getCurrentUser()
-  const memberships = getUserMemberships(user?.userId)
+  const [syncing, setSyncing] = useState(false)
+  const [memberships, setMemberships] = useState(() => getUserMemberships(user?.userId))
+
+  useEffect(() => {
+    if (!user?.userId) return
+    setSyncing(true)
+    syncMembershipsFromFirestore(user.userId).then(ms => {
+      setMemberships(getUserMemberships(user.userId))
+      setSyncing(false)
+    })
+  }, [user?.userId])
+
   const clubs = memberships
     .map(m => ({ ...m, club: getClubById(m.clubId), memberCount: getMembersByClub(m.clubId).length }))
     .filter(m => m.club)
 
-  function enterClub(m) {
+  async function enterClub(m) {
+    setSyncing(true)
+    await syncClubFromFirestore(m.clubId)
     setCurrentClub({ clubId: m.clubId, memberId: m.memberId, role: m.role })
     navigate('/home', { replace: true })
   }
@@ -28,7 +43,9 @@ export default function ClubSelect() {
       <div className="px-5 pt-10 pb-4 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">안녕하세요, {user?.name}님!</h1>
-          <p className="text-sm text-gray-400 mt-0.5">속한 북클럽을 선택하세요</p>
+          <p className="text-sm text-gray-400 mt-0.5">
+        {syncing ? '동기화 중…' : '속한 북클럽을 선택하세요'}
+      </p>
         </div>
         <button onClick={logout} className="text-xs text-gray-400 border border-gray-200 rounded-lg px-3 py-1.5">
           로그아웃

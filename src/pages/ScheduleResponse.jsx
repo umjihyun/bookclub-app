@@ -56,7 +56,7 @@ export default function ScheduleResponse() {
     for (const [date, set] of Object.entries(avail)) {
       availability[date] = [...set]
     }
-    upsertMeetingResponse({ memberId: user.memberId, meetingId, availability })
+    upsertMeetingResponse({ memberId: user.memberId, meetingId, clubId: user.clubId, availability })
     navigate('/schedule')
   }
 

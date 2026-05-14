@@ -30,16 +30,16 @@ export default function BookDetail() {
 
   function toggleRead() {
     if (!isRead) {
-      upsertMemberBook({ memberId: user.memberId, bookId, read: true, rating: myMemberBook?.rating, review: myMemberBook?.review })
+      upsertMemberBook({ memberId: user.memberId, bookId, clubId: user.clubId, read: true, rating: myMemberBook?.rating, review: myMemberBook?.review })
       setShowRating(true)
     } else {
-      upsertMemberBook({ memberId: user.memberId, bookId, read: false, rating: null, review: '' })
+      upsertMemberBook({ memberId: user.memberId, bookId, clubId: user.clubId, read: false, rating: null, review: '' })
       forceUpdate(n => n + 1)
     }
   }
 
   function handleRating({ rating, review }) {
-    upsertMemberBook({ memberId: user.memberId, bookId, read: true, rating, review })
+    upsertMemberBook({ memberId: user.memberId, bookId, clubId: user.clubId, read: true, rating, review })
     setShowRating(false)
     forceUpdate(n => n + 1)
   }
