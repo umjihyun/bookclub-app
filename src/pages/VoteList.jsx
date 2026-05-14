@@ -1,5 +1,5 @@
 import { useSync } from '../RealtimeProvider'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   getCurrentUser, getVoteRoundsByClub, getVoteCandidatesByRound,
@@ -40,11 +40,14 @@ export default function VoteList() {
   useSync()
   const [, forceUpdate] = useState(0)
 
-  let rounds = getVoteRoundsByClub(user.clubId)
-  if (rounds.length === 0) {
-    ensureActiveVoteRound(user.clubId)
-    rounds = getVoteRoundsByClub(user.clubId)
-  }
+  // 라운드 초기화는 mount 시 1번만 실행 (useSync 리렌더 때마다 실행 방지)
+  useEffect(() => {
+    const r = getVoteRoundsByClub(user.clubId)
+    if (r.filter(x => x.status === 'active').length === 0) {
+      ensureActiveVoteRound(user.clubId)
+      forceUpdate(n => n + 1)
+    }
+  }, [user.clubId])
 
   function handleHeart(candidateId) {
     toggleHeart({ candidateId, memberId: user.memberId, clubId: user.clubId })

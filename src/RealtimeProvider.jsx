@@ -53,7 +53,13 @@ export function RealtimeProvider({ children }) {
       unsubs.push(
         onSnapshot(
           collection(db, 'clubs', clubId, sub.name),
-          snap => { applySnap(sub, snap.docs.map(d => d.data()), clubId); bump() },
+          snap => {
+            const docs = snap.docs.map(d => d.data())
+            // Firestore가 비어있으면 로컬 데이터를 지우지 않음 (아직 업로드 중일 수 있음)
+            if (docs.length === 0 && sub.cf) return
+            applySnap(sub, docs, clubId)
+            bump()
+          },
           err => console.warn('[RT]', sub.name, err.message)
         )
       )
