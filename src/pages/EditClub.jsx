@@ -1,7 +1,7 @@
 import { useSync } from '../RealtimeProvider'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getCurrentUser, getClubById, getMembersByClub, getBooksByClub, updateClub, updateMemberRole, deleteClub } from '../storage'
+import { getCurrentUser, getClubById, getMembersByClub, getBooksByClub, updateClub, updateMemberRole, deleteClub, removeMember } from '../storage'
 import ImageUpload from '../components/ImageUpload'
 
 const ROLES = ['member', 'admin', 'superadmin']
@@ -43,6 +43,12 @@ export default function EditClub() {
     updateClub(user.clubId, { name: name.trim(), imageUrl: imageUrl.trim() })
     setSaved(true)
     setTimeout(() => { setSaved(false); navigate('/club') }, 800)
+  }
+
+  function kickMember(m) {
+    if (!confirm(`"${m.name}"을(를) 북클럽에서 강제 퇴장시키겠어요?`)) return
+    removeMember(m.id, user.clubId)
+    setMembers(prev => prev.filter(p => p.id !== m.id))
   }
 
   function cycleRole(m) {
@@ -103,6 +109,14 @@ export default function EditClub() {
               >
                 {ROLE_LABEL[m.role] || '멤버'}
               </button>
+              {user.role === 'superadmin' && m.id !== user.memberId && (
+                <button
+                  onClick={() => kickMember(m)}
+                  className="text-xs text-red-400 px-1.5 py-0.5 rounded-lg border border-red-200 ml-1"
+                >
+                  퇴장
+                </button>
+              )}
             </div>
           ))}
         </div>

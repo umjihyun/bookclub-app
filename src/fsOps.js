@@ -36,6 +36,25 @@ export function fsUpdateMember(clubId, memberId, updates) {
   fw(updateDoc(doc(db, 'clubs', clubId, 'members', memberId), updates))
 }
 
+export async function fsRemoveMember(clubId, memberId, userId) {
+  try {
+    const batch = writeBatch(db)
+    // 멤버 문서 삭제
+    batch.delete(doc(db, 'clubs', clubId, 'members', memberId))
+    // 멤버십 삭제
+    if (userId) batch.delete(doc(db, 'memberships', `${userId}_${clubId}`))
+    // 해당 멤버의 meetingResponses 삭제
+    const respSnap = await getDocs(collection(db, 'clubs', clubId, 'meetingResponses'))
+    respSnap.docs.filter(d => d.data().memberId === memberId).forEach(d => batch.delete(d.ref))
+    // 해당 멤버의 voteHearts 삭제
+    const heartsSnap = await getDocs(collection(db, 'clubs', clubId, 'voteHearts'))
+    heartsSnap.docs.filter(d => d.data().memberId === memberId).forEach(d => batch.delete(d.ref))
+    await batch.commit()
+  } catch (e) {
+    console.warn('[Firestore removeMember]', e.message)
+  }
+}
+
 // ── Books ──────────────────────────────────────────
 export function fsWriteBook(book) {
   fw(setDoc(doc(db, 'clubs', book.clubId, 'books', book.id), book))

@@ -1,6 +1,6 @@
 import {
   fsWriteUser, fsWriteClub, fsUpdateClub, fsWriteMembership,
-  fsWriteMember, fsUpdateMember, fsWriteBook, fsUpdateBook, fsDeleteBook,
+  fsWriteMember, fsUpdateMember, fsRemoveMember, fsWriteBook, fsUpdateBook, fsDeleteBook,
   fsWriteMemberBook, fsWriteMeeting, fsUpdateMeeting,
   fsWriteMeetingResponse, fsWriteNotice, fsDeleteNotice,
   fsWriteComment, fsDeleteComments, fsWriteVoteRound,
@@ -136,6 +136,17 @@ export function updateClub(id, updates) {
 export function getMembers() { return getList(KEYS.members) }
 export function getMembersByClub(clubId) { return getMembers().filter(m => m.clubId === clubId) }
 export function getMemberById(id) { return getMembers().find(m => m.id === id) || null }
+
+export function removeMember(memberId, clubId) {
+  // localStorage 정리
+  saveList(KEYS.members, getMembers().filter(m => !(m.id === memberId && m.clubId === clubId)))
+  const membership = getMemberships().find(m => m.memberId === memberId && m.clubId === clubId)
+  saveList(KEYS.memberships, getMemberships().filter(m => !(m.memberId === memberId && m.clubId === clubId)))
+  saveList(KEYS.meetingResponses, getMeetingResponses().filter(r => r.memberId !== memberId))
+  saveList(KEYS.voteHearts, getVoteHearts().filter(h => h.memberId !== memberId))
+  // Firestore 삭제
+  fsRemoveMember(clubId, memberId, membership?.userId)
+}
 
 export function ensureMemberExists({ memberId, name, clubId, role }) {
   if (getMemberById(memberId)) return
