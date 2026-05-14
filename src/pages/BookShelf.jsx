@@ -50,16 +50,20 @@ export default function BookShelf() {
                 onClick={() => navigate(`/books/${book.id}`)}
                 className="cursor-pointer relative"
               >
-                <div className={`relative rounded-xl overflow-hidden aspect-[2/3] shadow-sm ${!isRead ? 'opacity-40 grayscale' : ''}`}>
+                <div className="relative rounded-xl overflow-hidden aspect-[2/3] shadow-sm">
                   {book.coverUrl ? (
                     <img src={book.coverUrl} alt={book.title} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-b from-blue-200 to-blue-400 flex items-center justify-center">
+                    <div className={`w-full h-full flex items-center justify-center ${isRead ? 'bg-gradient-to-b from-blue-300 to-blue-500' : 'bg-gradient-to-b from-gray-200 to-gray-400'}`}>
                       <span className="text-3xl">📖</span>
                     </div>
                   )}
+                  {isRead && (
+                    <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-[10px] font-bold">✓</span>
+                    </div>
+                  )}
                 </div>
-                <div className={`absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full ${isRead ? 'bg-green-500' : 'bg-gray-400'}`} />
                 <p className="mt-1.5 text-xs font-medium text-gray-800 line-clamp-1">{book.title}</p>
                 {isRead && mb?.rating && <Stars rating={mb.rating} />}
               </div>

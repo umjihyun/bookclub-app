@@ -13,7 +13,7 @@ export default function Nav() {
   const { pathname } = useLocation()
 
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white border-t border-gray-200 flex z-50">
+    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white border-t border-gray-200 flex z-50 pb-safe">
       {items.map(item => {
         const active = pathname === item.path || (item.path !== '/home' && pathname.startsWith(item.path))
         return (

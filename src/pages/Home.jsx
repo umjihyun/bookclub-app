@@ -44,8 +44,8 @@ export default function Home() {
       {/* Header */}
       <div className="px-5 pt-10 pb-4">
         <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">{club?.name || '내 북클럽'}</h1>
+          <div className="min-w-0 flex-1 mr-2">
+            <h1 className="text-xl font-bold text-gray-900 truncate">{club?.name || '내 북클럽'}</h1>
             <p className="text-sm text-gray-400 mt-0.5">멤버 {members.length}명 · {user.role === 'admin' ? '관리자' : '멤버'}</p>
           </div>
           <div className="flex gap-2">
