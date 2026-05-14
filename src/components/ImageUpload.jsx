@@ -11,12 +11,17 @@ export default function ImageUpload({ value, onChange, label = '이미지 업로
     ? 'w-full aspect-[2/3] max-w-[140px]'
     : 'w-full h-36'
 
+  const ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'bmp', 'tiff', 'tif']
+
   function handleFile(e) {
     const file = e.target.files[0]
     e.target.value = ''
     if (!file) return
-    if (!file.type.startsWith('image/')) {
-      setError('이미지 파일만 업로드 가능해요')
+
+    const ext = file.name.split('.').pop().toLowerCase()
+    const isImage = file.type.startsWith('image/') || ALLOWED_EXTS.includes(ext)
+    if (!isImage) {
+      setError('이미지 파일만 업로드 가능해요 (jpg, jpeg, png, webp 등)')
       return
     }
     if (file.size > 5 * 1024 * 1024) {
@@ -25,8 +30,8 @@ export default function ImageUpload({ value, onChange, label = '이미지 업로
     }
 
     setError('')
-    const ext = file.name.split('.').pop().toLowerCase()
-    const path = `images/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+    const safeExt = ext || 'jpg'
+    const path = `images/${Date.now()}_${Math.random().toString(36).slice(2)}.${safeExt}`
     const storageRef = ref(storage, path)
     const task = uploadBytesResumable(storageRef, file)
 
@@ -45,7 +50,7 @@ export default function ImageUpload({ value, onChange, label = '이미지 업로
 
   return (
     <div>
-      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      <input ref={inputRef} type="file" accept="image/*,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif" className="hidden" onChange={handleFile} />
 
       {/* 미리보기 */}
       <div
