@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { getCurrentUser } from './storage'
 import { RealtimeProvider } from './RealtimeProvider'
+import PageMeta from './PageMeta'
 import Splash from './pages/Splash'
 import Login from './pages/Login'
 import ClubSelect from './pages/ClubSelect'
@@ -43,6 +44,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <RealtimeProvider>
+      <PageMeta />
       <Routes>
         <Route path="/" element={<Splash />} />
         <Route path="/login" element={<Login />} />
