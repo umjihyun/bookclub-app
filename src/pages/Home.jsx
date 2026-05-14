@@ -107,9 +107,9 @@ export default function Home() {
             <div>
               <p className="font-semibold text-gray-900">{nextMeeting.name}</p>
               <p className="text-xs text-gray-500 mt-0.5">
-                {nextMeeting.status === 'confirmed'
-                  ? `확정: ${nextMeeting.confirmedSlot?.date} ${nextMeeting.confirmedSlot?.timeRange}`
-                  : `후보 ${nextMeeting.slots?.length}개 · 응답 대기중`}
+                {nextMeeting.status === 'confirmed' && nextMeeting.confirmedSlot
+                  ? `확정: ${nextMeeting.confirmedSlot.date} ${String(nextMeeting.confirmedSlot.hour).padStart(2,'0')}:00`
+                  : `날짜 ${(nextMeeting.dates || []).length}개 · 응답 대기중`}
               </p>
             </div>
           ) : (

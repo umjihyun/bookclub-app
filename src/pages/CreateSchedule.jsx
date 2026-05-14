@@ -6,32 +6,30 @@ export default function CreateSchedule() {
   const navigate = useNavigate()
   const user = getCurrentUser()
   const [name, setName] = useState('')
-  const [slots, setSlots] = useState([{ date: '', timeRange: '' }])
+  const [dates, setDates] = useState([''])
+  const [startHour, setStartHour] = useState(9)
+  const [endHour, setEndHour] = useState(22)
 
   if (user.role !== 'admin') {
     navigate('/schedule', { replace: true })
     return null
   }
 
-  function addSlot() {
-    setSlots(s => [...s, { date: '', timeRange: '' }])
-  }
+  function addDate() { setDates(d => [...d, '']) }
+  function removeDate(i) { setDates(d => d.filter((_, idx) => idx !== i)) }
+  function updateDate(i, v) { setDates(d => d.map((x, idx) => idx === i ? v : x)) }
 
-  function removeSlot(i) {
-    setSlots(s => s.filter((_, idx) => idx !== i))
-  }
-
-  function updateSlot(i, field, value) {
-    setSlots(s => s.map((slot, idx) => idx === i ? { ...slot, [field]: value } : slot))
-  }
+  const validDates = dates.filter(d => d.trim())
+  const canSubmit = name.trim() && validDates.length > 0 && endHour > startHour
 
   function handleSubmit(e) {
     e.preventDefault()
-    const validSlots = slots.filter(s => s.date && s.timeRange)
-    if (!name.trim() || validSlots.length === 0) return
-    createMeeting({ clubId: user.clubId, name: name.trim(), slots: validSlots })
+    if (!canSubmit) return
+    createMeeting({ clubId: user.clubId, name: name.trim(), dates: validDates, startHour, endHour })
     navigate('/schedule', { replace: true })
   }
+
+  const hours = Array.from({ length: 24 }, (_, i) => i)
 
   return (
     <div className="min-h-screen px-6 py-10">
@@ -52,41 +50,57 @@ export default function CreateSchedule() {
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-sm font-medium text-gray-700">날짜 후보</label>
-            <button type="button" onClick={addSlot} className="text-sm text-blue-600 font-medium">+ 추가</button>
+            <button type="button" onClick={addDate} className="text-sm text-blue-600 font-medium">+ 추가</button>
           </div>
-          <div className="flex flex-col gap-3">
-            {slots.map((slot, i) => (
-              <div key={i} className="border border-gray-100 rounded-xl p-3 flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-400 font-medium">후보 {i + 1}</span>
-                  {slots.length > 1 && (
-                    <button type="button" onClick={() => removeSlot(i)} className="text-xs text-red-400">삭제</button>
-                  )}
-                </div>
+          <div className="flex flex-col gap-2">
+            {dates.map((d, i) => (
+              <div key={i} className="flex items-center gap-2">
                 <input
                   type="date"
-                  className="w-full border border-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
-                  value={slot.date}
-                  onChange={e => updateSlot(i, 'date', e.target.value)}
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-400"
+                  value={d}
+                  onChange={e => updateDate(i, e.target.value)}
                 />
-                <input
-                  type="text"
-                  className="w-full border border-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
-                  placeholder="예: 19:00~21:00"
-                  value={slot.timeRange}
-                  onChange={e => updateSlot(i, 'timeRange', e.target.value)}
-                />
+                {dates.length > 1 && (
+                  <button type="button" onClick={() => removeDate(i)} className="text-red-400 text-sm px-2 py-1">✕</button>
+                )}
               </div>
             ))}
           </div>
         </div>
 
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">응답 시간대</label>
+          <div className="flex items-center gap-3">
+            <select
+              value={startHour}
+              onChange={e => setStartHour(Number(e.target.value))}
+              className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-400 bg-white"
+            >
+              {hours.map(h => (
+                <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
+              ))}
+            </select>
+            <span className="text-gray-400 text-sm shrink-0">~</span>
+            <select
+              value={endHour}
+              onChange={e => setEndHour(Number(e.target.value))}
+              className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-400 bg-white"
+            >
+              {hours.filter(h => h > startHour).map(h => (
+                <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
+              ))}
+            </select>
+          </div>
+          <p className="text-xs text-gray-400 mt-1.5">멤버들이 이 시간대 안에서 가능한 시간을 선택해요</p>
+        </div>
+
         <button
           type="submit"
-          disabled={!name.trim() || slots.every(s => !s.date || !s.timeRange)}
-          className="w-full py-4 bg-blue-600 text-white rounded-2xl text-base font-semibold disabled:opacity-40"
+          disabled={!canSubmit}
+          className="w-full py-4 bg-blue-600 text-white rounded-2xl text-base font-semibold disabled:opacity-40 mt-2"
         >
-          투표 시작하기
+          가능 시간 조사 시작
         </button>
       </form>
     </div>

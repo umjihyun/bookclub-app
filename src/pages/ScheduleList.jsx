@@ -8,6 +8,10 @@ function statusLabel(status) {
   return { label: '닫힘', cls: 'bg-gray-100 text-gray-500' }
 }
 
+function fmtHour(h) {
+  return `${String(h).padStart(2, '0')}:00`
+}
+
 export default function ScheduleList() {
   const navigate = useNavigate()
   const user = getCurrentUser()
@@ -38,8 +42,7 @@ export default function ScheduleList() {
           {meetings.map(meeting => {
             const responses = getMeetingResponsesByMeeting(meeting.id)
             const { label, cls } = statusLabel(meeting.status)
-            const slots = meeting.slots || []
-            const slotCounts = slots.map((_, i) => responses.filter(r => r.selectedSlots?.includes(i)).length)
+            const slot = meeting.confirmedSlot
 
             return (
               <div
@@ -49,30 +52,25 @@ export default function ScheduleList() {
                     ? `/schedule/${meeting.id}/result`
                     : `/schedule/${meeting.id}`
                 )}
-                className="border border-gray-100 rounded-2xl p-4 cursor-pointer"
+                className="border border-gray-100 rounded-2xl p-4 cursor-pointer active:bg-gray-50"
               >
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-semibold text-gray-900">{meeting.name}</h3>
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cls}`}>{label}</span>
                 </div>
-                {meeting.status === 'confirmed' && meeting.confirmedSlot ? (
-                  <p className="text-sm text-green-700 font-medium">
-                    {meeting.confirmedSlot.date} {meeting.confirmedSlot.timeRange}
-                  </p>
+
+                {meeting.status === 'confirmed' && slot ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-semibold text-green-700">{slot.date}</span>
+                    <span className="text-sm text-green-600">{fmtHour(slot.hour)} ~ {fmtHour(slot.hour + 1)}</span>
+                  </div>
                 ) : (
-                  <div className="flex flex-col gap-1.5 mt-2">
-                    {slots.map((slot, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500 w-32 shrink-0">{slot.date} {slot.timeRange}</span>
-                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-blue-400 rounded-full transition-all"
-                            style={{ width: members.length > 0 ? `${(slotCounts[i] / members.length) * 100}%` : '0%' }}
-                          />
-                        </div>
-                        <span className="text-xs text-gray-400 w-8 text-right">{slotCounts[i]}/{members.length}</span>
-                      </div>
-                    ))}
+                  <div className="flex items-center gap-3 text-xs text-gray-400">
+                    <span>날짜 {(meeting.dates || []).length}개</span>
+                    <span>·</span>
+                    <span>{fmtHour(meeting.startHour)} ~ {fmtHour(meeting.endHour)}</span>
+                    <span>·</span>
+                    <span className="text-blue-500 font-medium">{responses.length}/{members.length}명 응답</span>
                   </div>
                 )}
               </div>

@@ -1,7 +1,22 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getCurrentUser, getMeetingById, getMeetingResponsesByMeeting, getMembersByClub, updateMeeting } from '../storage'
 import Nav from '../components/Nav'
+
+function fmtDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00')
+  const days = ['일', '월', '화', '수', '목', '금', '토']
+  return `${d.getMonth() + 1}/${d.getDate()}\n${days[d.getDay()]}`
+}
+
+function heatStyle(count, total) {
+  if (total === 0 || count === 0) return { background: '#f3f4f6', color: '#d1d5db' }
+  const r = count / total
+  if (r <= 0.25) return { background: '#bfdbfe', color: '#1e40af' }
+  if (r <= 0.5)  return { background: '#60a5fa', color: '#1e3a8a' }
+  if (r <= 0.75) return { background: '#2563eb', color: '#ffffff' }
+  return { background: '#1d4ed8', color: '#ffffff' }
+}
 
 export default function ScheduleResult() {
   const { meetingId } = useParams()
@@ -13,84 +28,113 @@ export default function ScheduleResult() {
 
   const members = getMembersByClub(user.clubId)
   const responses = getMeetingResponsesByMeeting(meetingId)
-  const slots = meeting.slots || []
+  const dates = meeting.dates || []
+  const hours = []
+  for (let h = meeting.startHour; h < meeting.endHour; h++) hours.push(h)
 
-  const slotCounts = slots.map((_, i) => responses.filter(r => r.selectedSlots?.includes(i)).length)
-  const maxCount = Math.max(...slotCounts, 0)
-
-  function confirm(slotIndex) {
-    const slot = slots[slotIndex]
-    updateMeeting(meetingId, { status: 'confirmed', confirmedSlot: slot })
-    setMeeting(m => ({ ...m, status: 'confirmed', confirmedSlot: slot }))
+  function getCount(date, hour) {
+    return responses.filter(r => Array.isArray(r.availability?.[date]) && r.availability[date].includes(hour)).length
   }
+
+  function isConfirmed(date, hour) {
+    return meeting.confirmedSlot?.date === date && meeting.confirmedSlot?.hour === hour
+  }
+
+  function confirmSlot(date, hour) {
+    const timeStr = `${String(hour).padStart(2, '0')}:00 ~ ${String(hour + 1).padStart(2, '0')}:00`
+    if (!confirm(`${date} ${timeStr}\n이 시간으로 확정하시겠어요?`)) return
+    updateMeeting(meetingId, { status: 'confirmed', confirmedSlot: { date, hour } })
+    setMeeting(m => ({ ...m, status: 'confirmed', confirmedSlot: { date, hour } }))
+  }
+
+  const canConfirm = user.role === 'admin' && meeting.status === 'open'
 
   return (
     <div className="pb-24">
-      <div className="px-5 pt-8 pb-4">
+      <div className="px-5 pt-8 pb-3">
         <button onClick={() => navigate('/schedule')} className="text-gray-400 text-sm mb-4">← 일정</button>
         <h1 className="text-xl font-bold">{meeting.name}</h1>
         <p className="text-sm text-gray-400 mt-1">
-          {meeting.status === 'confirmed' ? '확정된 일정' : `${responses.length}/${members.length}명 응답`}
+          {meeting.status === 'confirmed'
+            ? '확정된 일정'
+            : `${responses.length}/${members.length}명 응답 완료`}
         </p>
       </div>
 
+      {/* 확정 배너 */}
       {meeting.status === 'confirmed' && meeting.confirmedSlot && (
-        <div className="mx-5 mb-4 bg-green-50 border border-green-200 rounded-2xl p-4 text-center">
+        <div className="mx-5 mb-5 bg-green-50 border border-green-200 rounded-2xl p-4 text-center">
           <p className="text-xs text-green-600 font-medium mb-1">확정된 일정</p>
-          <p className="text-lg font-bold text-green-800">{meeting.confirmedSlot.date}</p>
-          <p className="text-base text-green-700">{meeting.confirmedSlot.timeRange}</p>
+          <p className="text-xl font-bold text-green-800">{meeting.confirmedSlot.date}</p>
+          <p className="text-lg text-green-700">
+            {String(meeting.confirmedSlot.hour).padStart(2, '0')}:00 ~{' '}
+            {String(meeting.confirmedSlot.hour + 1).padStart(2, '0')}:00
+          </p>
         </div>
       )}
 
-      <div className="px-5 flex flex-col gap-3">
-        {slots.map((slot, i) => {
-          const count = slotCounts[i]
-          const isBest = count === maxCount && maxCount > 0
-          const isConfirmed = meeting.confirmedSlot?.date === slot.date && meeting.confirmedSlot?.timeRange === slot.timeRange
-          const respondents = responses.filter(r => r.selectedSlots?.includes(i))
+      {/* 히트맵 범례 */}
+      {meeting.status === 'open' && (
+        <div className="px-5 flex items-center gap-1.5 mb-3">
+          <span className="text-xs text-gray-400 mr-1">적음</span>
+          {[0, 0.3, 0.6, 1].map((r, i) => {
+            const s = heatStyle(r * 4, 4)
+            return <div key={i} className="w-6 h-6 rounded" style={{ background: s.background }} />
+          })}
+          <span className="text-xs text-gray-400 ml-1">많음</span>
+          {canConfirm && <span className="text-xs text-gray-400 ml-auto">탭하여 확정</span>}
+        </div>
+      )}
 
-          return (
-            <div key={i} className={`rounded-2xl p-4 border-2 ${isConfirmed ? 'border-green-400 bg-green-50' : isBest ? 'border-blue-300 bg-blue-50' : 'border-gray-100 bg-white'}`}>
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <p className="font-semibold text-gray-900">{slot.date}</p>
-                  <p className="text-sm text-gray-500">{slot.timeRange}</p>
-                </div>
-                <div className="text-right">
-                  {isBest && !isConfirmed && (
-                    <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full font-medium">추천</span>
-                  )}
-                  {isConfirmed && (
-                    <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-medium">확정</span>
-                  )}
-                  <p className="text-sm font-semibold text-gray-700 mt-1">{count}/{members.length}명</p>
-                </div>
-              </div>
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-2">
-                <div
-                  className={`h-full rounded-full ${isConfirmed ? 'bg-green-400' : 'bg-blue-400'}`}
-                  style={{ width: members.length > 0 ? `${(count / members.length) * 100}%` : '0%' }}
-                />
-              </div>
-              {respondents.length > 0 && (
-                <p className="text-xs text-gray-400">
-                  {respondents.map(r => {
-                    const m = members.find(mb => mb.id === r.memberId)
-                    return m?.name
-                  }).filter(Boolean).join(', ')}
-                </p>
-              )}
-              {user.role === 'admin' && meeting.status === 'open' && (
-                <button
-                  onClick={() => confirm(i)}
-                  className="mt-2 w-full py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold"
-                >
-                  이 날짜로 확정
-                </button>
-              )}
+      {/* Grid */}
+      <div className="px-4 overflow-x-auto pb-2">
+        <div
+          className="grid"
+          style={{
+            gridTemplateColumns: `44px repeat(${dates.length}, 1fr)`,
+            minWidth: dates.length > 3 ? `${44 + dates.length * 72}px` : 'auto'
+          }}
+        >
+          {/* Header */}
+          <div />
+          {dates.map(d => (
+            <div key={d} className="text-center text-xs font-semibold text-gray-600 pb-2 whitespace-pre-line leading-snug">
+              {fmtDate(d)}
             </div>
-          )
-        })}
+          ))}
+
+          {/* Hour rows */}
+          {hours.map(hour => (
+            <Fragment key={hour}>
+              <div className="flex items-center justify-end pr-2 text-xs text-gray-400 h-10">
+                {String(hour).padStart(2, '0')}:00
+              </div>
+              {dates.map(date => {
+                const count = getCount(date, hour)
+                const confirmed = isConfirmed(date, hour)
+                const style = confirmed
+                  ? { background: '#16a34a', color: '#ffffff' }
+                  : heatStyle(count, members.length)
+
+                return (
+                  <button
+                    key={`${date}-${hour}`}
+                    onClick={() => canConfirm && confirmSlot(date, hour)}
+                    disabled={!canConfirm}
+                    className="h-10 mx-0.5 my-0.5 rounded-lg flex items-center justify-center relative transition-opacity"
+                    style={{ background: style.background }}
+                  >
+                    {confirmed ? (
+                      <span className="text-sm font-bold" style={{ color: style.color }}>✓</span>
+                    ) : count > 0 ? (
+                      <span className="text-xs font-bold" style={{ color: style.color }}>{count}</span>
+                    ) : null}
+                  </button>
+                )
+              })}
+            </Fragment>
+          ))}
+        </div>
       </div>
 
       <Nav />

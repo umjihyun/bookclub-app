@@ -163,9 +163,9 @@ export function getMeetingById(id) {
   return getMeetings().find(m => m.id === id) || null
 }
 
-export function createMeeting({ clubId, name, slots }) {
+export function createMeeting({ clubId, name, dates, startHour, endHour }) {
   const meetings = getMeetings()
-  const meeting = { id: uid(), clubId, name, slots, status: 'open', confirmedSlot: null, createdAt: Date.now() }
+  const meeting = { id: uid(), clubId, name, dates, startHour, endHour, status: 'open', confirmedSlot: null, createdAt: Date.now() }
   saveList(KEYS.meetings, [...meetings, meeting])
   return meeting
 }
@@ -184,10 +184,10 @@ export function getMeetingResponsesByMeeting(meetingId) {
   return getMeetingResponses().filter(r => r.meetingId === meetingId)
 }
 
-export function upsertMeetingResponse({ memberId, meetingId, selectedSlots }) {
+export function upsertMeetingResponse({ memberId, meetingId, availability }) {
   const all = getMeetingResponses()
   const existing = all.findIndex(r => r.memberId === memberId && r.meetingId === meetingId)
-  const updated = { memberId, meetingId, selectedSlots }
+  const updated = { memberId, meetingId, availability }
   if (existing >= 0) {
     const next = [...all]
     next[existing] = updated
