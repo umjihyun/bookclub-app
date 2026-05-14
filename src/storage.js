@@ -1,6 +1,6 @@
 import {
   fsWriteUser, fsWriteClub, fsUpdateClub, fsWriteMembership,
-  fsWriteMember, fsUpdateMember, fsWriteBook, fsUpdateBook,
+  fsWriteMember, fsUpdateMember, fsWriteBook, fsUpdateBook, fsDeleteBook,
   fsWriteMemberBook, fsWriteMeeting, fsUpdateMeeting,
   fsWriteMeetingResponse, fsWriteNotice, fsDeleteNotice,
   fsWriteComment, fsDeleteComments, fsWriteVoteRound,
@@ -177,6 +177,14 @@ export function createBook({ clubId, title, author, coverUrl, startDate, endDate
   fsWriteBook(book)
   return book
 }
+export function deleteBook(id) {
+  const book = getBooks().find(b => b.id === id)
+  if (!book) return
+  saveList(KEYS.books, getBooks().filter(b => b.id !== id))
+  saveList(KEYS.memberBooks, getMemberBooks().filter(mb => mb.bookId !== id))
+  fsDeleteBook(book.clubId, id)
+}
+
 export function updateBook(id, updates) {
   const book = getBooks().find(b => b.id === id)
   if (!book) return

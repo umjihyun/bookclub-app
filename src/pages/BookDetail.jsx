@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   getCurrentUser, getBookById, getMembersByClub, getMemberBook,
-  getMemberBooksByBook, upsertMemberBook, getMinutesByBook, addMinutes, getMemberById, updateBook
+  getMemberBooksByBook, upsertMemberBook, getMinutesByBook, addMinutes, getMemberById, updateBook, deleteBook
 } from '../storage'
 import RatingModal from '../components/RatingModal'
 import ImageUpload from '../components/ImageUpload'
@@ -86,7 +86,19 @@ export default function BookDetail() {
         <div className="flex items-center justify-between mb-4">
           <button onClick={() => navigate('/books')} className="text-gray-400 text-sm">← 책꽂이</button>
           {isAdmin && !editing && (
-            <button onClick={startEdit} className="text-sm text-blue-600 font-medium">수정</button>
+            <div className="flex gap-3">
+              <button onClick={startEdit} className="text-sm text-blue-600 font-medium">수정</button>
+              <button
+                onClick={() => {
+                  if (!confirm('이 책을 삭제하시겠어요?')) return
+                  deleteBook(bookId)
+                  navigate('/books', { replace: true })
+                }}
+                className="text-sm text-red-400 font-medium"
+              >
+                삭제
+              </button>
+            </div>
           )}
           {editing && (
             <div className="flex gap-3">

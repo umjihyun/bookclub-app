@@ -45,6 +45,18 @@ export function fsUpdateBook(clubId, bookId, updates) {
   fw(updateDoc(doc(db, 'clubs', clubId, 'books', bookId), updates))
 }
 
+export async function fsDeleteBook(clubId, bookId) {
+  try {
+    const batch = writeBatch(db)
+    batch.delete(doc(db, 'clubs', clubId, 'books', bookId))
+    const mbSnap = await getDocs(collection(db, 'clubs', clubId, 'memberBooks'))
+    mbSnap.docs.filter(d => d.data().bookId === bookId).forEach(d => batch.delete(d.ref))
+    await batch.commit()
+  } catch (e) {
+    console.warn('[Firestore deleteBook]', e.message)
+  }
+}
+
 // ── MemberBooks ────────────────────────────────────
 export function fsWriteMemberBook(clubId, mb) {
   fw(setDoc(doc(db, 'clubs', clubId, 'memberBooks', `${mb.memberId}_${mb.bookId}`), mb))
