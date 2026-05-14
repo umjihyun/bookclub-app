@@ -1,16 +1,21 @@
 import { initializeApp } from 'firebase/app'
 import { getStorage } from 'firebase/storage'
 import { getFirestore } from 'firebase/firestore'
+import { getAuth, signInAnonymously } from 'firebase/auth'
 
 const firebaseConfig = {
-  projectId: 'bookclub-app-7f897',
-  appId: '1:1087634152747:web:b551df156b29c3a965796e',
-  storageBucket: 'bookclub-app-7f897.firebasestorage.app',
-  apiKey: 'AIzaSyD7WAvwtIrjOjprkfPNS3yeGeK-k-ydN3E',
-  authDomain: 'bookclub-app-7f897.firebaseapp.com',
-  messagingSenderId: '1087634152747',
+  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId:             import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
 const app = initializeApp(firebaseConfig)
 export const storage = getStorage(app)
 export const db = getFirestore(app)
+export const auth = getAuth(app)
+
+// 익명 인증 — Firestore/Storage 보안 규칙의 request.auth 활성화
+signInAnonymously(auth).catch(e => console.warn('[Auth]', e.message))

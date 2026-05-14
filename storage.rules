@@ -2,8 +2,11 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     match /images/{allPaths=**} {
+      // 이미지 읽기는 누구나 (공개 이미지)
       allow read: if true;
-      allow write: if request.resource.size < 5 * 1024 * 1024;
+      // 업로드는 인증된 사용자만, 5MB 이하
+      allow write: if request.auth != null
+                   && request.resource.size < 5 * 1024 * 1024;
     }
   }
 }

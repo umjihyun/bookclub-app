@@ -1,8 +1,58 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    // 유저 데이터
+    match /users/{userId} {
+      allow read: if isAuthed();
+      allow create: if isAuthed()
+        && request.resource.data.keys().hasAll(['id', 'nickname', 'pin'])
+        && request.resource.data.nickname is string
+        && request.resource.data.nickname.size() > 0
+        && request.resource.data.nickname.size() <= 50
+        && request.resource.data.pin is string
+        && request.resource.data.pin.size() == 4;
+      allow update: if isAuthed()
+        && request.resource.data.keys().hasAll(['id', 'nickname', 'pin'])
+        && request.resource.data.nickname.size() > 0;
+    }
+
+    // 초대코드 조회
+    match /clubs_by_code/{code} {
+      allow read: if isAuthed();
+      allow write: if isAuthed()
+        && request.resource.data.keys().hasAll(['id', 'name', 'code', 'maxMembers']);
+    }
+
+    // 멤버십
+    match /memberships/{docId} {
+      allow read: if isAuthed();
+      allow write: if isAuthed()
+        && request.resource.data.keys().hasAll(['userId', 'clubId', 'memberId', 'role'])
+        && request.resource.data.role in ['member', 'admin', 'superadmin'];
+    }
+
+    // 클럽 및 모든 서브컬렉션
+    match /clubs/{clubId} {
+      allow read: if isAuthed();
+      allow create, update: if isAuthed()
+        && request.resource.data.keys().hasAll(['id', 'name', 'code', 'maxMembers'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.maxMembers is int
+        && request.resource.data.maxMembers > 0
+        && request.resource.data.maxMembers <= 50;
+      allow delete: if isAuthed();
+
+      // 서브컬렉션 — 인증된 사용자만 접근
+      match /{subcollection}/{docId} {
+        allow read, write: if isAuthed();
+      }
     }
   }
 }
