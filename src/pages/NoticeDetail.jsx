@@ -4,7 +4,6 @@ import {
   getCurrentUser, getNoticeById, getMemberById, deleteNotice,
   getCommentsByPost, createComment, deleteComment
 } from '../storage'
-import Nav from '../components/Nav'
 
 function relTime(ts) {
   const d = Date.now() - ts
@@ -15,12 +14,101 @@ function relTime(ts) {
 }
 
 function Avatar({ name, size = 'md' }) {
-  const cls = size === 'sm'
-    ? 'w-7 h-7 text-xs'
-    : 'w-8 h-8 text-sm'
+  const cls = size === 'sm' ? 'w-7 h-7 text-xs' : 'w-8 h-8 text-sm'
   return (
     <div className={`${cls} rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600 shrink-0`}>
       {name?.[0] || '?'}
+    </div>
+  )
+}
+
+// ★ 최상위 컴포넌트로 분리 — 부모 state 변화로 인한 remount 방지
+function CommentItem({ comment, replies, isReply, user, replyToId, onReplyTo, onDelete, onSubmitReply }) {
+  const [replyText, setReplyText] = useState('')
+  const inputRef = useRef()
+  const isReplying = replyToId === comment.id
+  const author = getMemberById(comment.authorId)
+  const canDel = user.role === 'admin' || user.role === 'superadmin' || user.memberId === comment.authorId
+
+  useEffect(() => {
+    if (isReplying) inputRef.current?.focus()
+  }, [isReplying])
+
+  function submitReply() {
+    if (!replyText.trim()) return
+    // 대댓글은 항상 최상위 댓글의 자식으로 (2 depth 고정)
+    const parentId = isReply ? comment.parentId : comment.id
+    onSubmitReply(parentId, replyText.trim())
+    setReplyText('')
+    onReplyTo(null)
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitReply() }
+  }
+
+  return (
+    <div className={isReply ? 'ml-9 mt-2' : ''}>
+      <div className="flex gap-2.5">
+        <Avatar name={author?.name} size={isReply ? 'sm' : 'md'} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2">
+            <span className="text-sm font-semibold text-gray-900">{author?.name || '멤버'}</span>
+            <span className="text-xs text-gray-400">{relTime(comment.createdAt)}</span>
+          </div>
+          <p className="text-sm text-gray-700 mt-0.5 leading-snug whitespace-pre-wrap">{comment.content}</p>
+          <div className="flex items-center gap-3 mt-1.5">
+            <button
+              onClick={() => onReplyTo(isReplying ? null : comment.id)}
+              className="text-xs text-gray-400 font-medium"
+            >
+              {isReplying ? '취소' : '답글'}
+            </button>
+            {canDel && (
+              <button onClick={() => onDelete(comment.id)} className="text-xs text-red-400">삭제</button>
+            )}
+          </div>
+
+          {isReplying && (
+            <div className="mt-2 flex gap-2">
+              <input
+                ref={inputRef}
+                value={replyText}
+                onChange={e => setReplyText(e.target.value)}
+                onKeyDown={handleKey}
+                placeholder={`${author?.name}에게 답글...`}
+                className="flex-1 bg-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none"
+              />
+              <button
+                onClick={submitReply}
+                disabled={!replyText.trim()}
+                className="px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold disabled:opacity-40"
+              >
+                등록
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 대댓글 */}
+      {!isReply && replies?.length > 0 && (
+        <div className="ml-9 mt-2 flex flex-col gap-3 relative">
+          <div className="absolute left-0 top-0 bottom-0 w-px bg-gray-200 -translate-x-4" />
+          {replies.map(reply => (
+            <CommentItem
+              key={reply.id}
+              comment={reply}
+              isReply
+              user={user}
+              replyToId={replyToId}
+              onReplyTo={onReplyTo}
+              onDelete={onDelete}
+              onSubmitReply={onSubmitReply}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -32,25 +120,18 @@ export default function NoticeDetail() {
   const notice = getNoticeById(noticeId)
 
   const [comments, setComments] = useState(() => getCommentsByPost(noticeId))
-  const [input, setInput] = useState('')
-  const [replyTo, setReplyTo] = useState(null) // { id, authorName, isReply }
-  const inputRef = useRef()
-
-  useEffect(() => {
-    if (replyTo) inputRef.current?.focus()
-  }, [replyTo])
+  const [newComment, setNewComment] = useState('')
+  const [replyToId, setReplyToId] = useState(null)
 
   if (!notice) return <div className="p-6 text-gray-400">게시글을 찾을 수 없어요</div>
 
   const author = getMemberById(notice.authorId)
-  const canDeletePost = user.role === 'admin' || user.memberId === notice.authorId
+  const canDeletePost = user.role === 'admin' || user.role === 'superadmin' || user.memberId === notice.authorId
 
   const topLevel = comments.filter(c => !c.parentId)
   const repliesFor = (parentId) => comments.filter(c => c.parentId === parentId)
 
-  function refreshComments() {
-    setComments(getCommentsByPost(noticeId))
-  }
+  function refresh() { setComments(getCommentsByPost(noticeId)) }
 
   function handleDeletePost() {
     if (!confirm('이 게시글을 삭제하시겠어요?')) return
@@ -58,105 +139,30 @@ export default function NoticeDetail() {
     navigate('/notices', { replace: true })
   }
 
-  function handleSubmit() {
-    if (!input.trim()) return
-    const parentId = replyTo ? (replyTo.isReply ? replyTo.parentId : replyTo.id) : null
-    createComment({ postId: noticeId, parentId, authorId: user.memberId, content: input.trim(), clubId: user.clubId })
-    setInput('')
-    setReplyTo(null)
-    refreshComments()
-  }
-
   function handleDeleteComment(id) {
     if (!confirm('댓글을 삭제하시겠어요?')) return
     deleteComment(id)
-    refreshComments()
+    refresh()
   }
 
-  function handleKeyDown(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSubmit()
-    }
+  function handleSubmitNew() {
+    if (!newComment.trim()) return
+    createComment({ postId: noticeId, parentId: null, authorId: user.memberId, content: newComment.trim(), clubId: user.clubId })
+    setNewComment('')
+    refresh()
   }
 
-  function CommentItem({ comment, isReply = false }) {
-    const commentAuthor = getMemberById(comment.authorId)
-    const canDel = user.role === 'admin' || user.memberId === comment.authorId
-    const replies = repliesFor(comment.id)
+  function handleSubmitReply(parentId, text) {
+    createComment({ postId: noticeId, parentId, authorId: user.memberId, content: text, clubId: user.clubId })
+    refresh()
+  }
 
-    return (
-      <div className={isReply ? 'ml-9 mt-2' : ''}>
-        {isReply && (
-          <div className="absolute -left-4 top-2 bottom-0 w-px bg-gray-200" />
-        )}
-        <div className="flex gap-2.5 relative">
-          <Avatar name={commentAuthor?.name} size={isReply ? 'sm' : 'md'} />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-2">
-              <span className="text-sm font-semibold text-gray-900">{commentAuthor?.name || '멤버'}</span>
-              <span className="text-xs text-gray-400">{relTime(comment.createdAt)}</span>
-            </div>
-            <p className="text-sm text-gray-700 mt-0.5 leading-snug whitespace-pre-wrap">{comment.content}</p>
-            <div className="flex items-center gap-3 mt-1.5">
-              <button
-                onClick={() => setReplyTo(
-                  replyTo?.id === comment.id
-                    ? null
-                    : { id: comment.id, authorName: commentAuthor?.name, isReply, parentId: isReply ? comment.parentId : comment.id }
-                )}
-                className="text-xs text-gray-400 font-medium"
-              >
-                {replyTo?.id === comment.id ? '취소' : '답글'}
-              </button>
-              {canDel && (
-                <button
-                  onClick={() => handleDeleteComment(comment.id)}
-                  className="text-xs text-red-400"
-                >
-                  삭제
-                </button>
-              )}
-            </div>
-
-            {/* 이 댓글에 대한 인라인 답글 입력 */}
-            {replyTo?.id === comment.id && (
-              <div className="mt-2 flex gap-2">
-                <input
-                  ref={inputRef}
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={`${replyTo.authorName}에게 답글...`}
-                  className="flex-1 bg-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none"
-                />
-                <button
-                  onClick={handleSubmit}
-                  disabled={!input.trim()}
-                  className="px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold disabled:opacity-40"
-                >
-                  등록
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 대댓글 */}
-        {!isReply && replies.length > 0 && (
-          <div className="ml-9 mt-2 flex flex-col gap-3 relative">
-            <div className="absolute left-0 top-0 bottom-0 w-px bg-gray-200 -translate-x-4" />
-            {replies.map(reply => (
-              <CommentItem key={reply.id} comment={reply} isReply />
-            ))}
-          </div>
-        )}
-      </div>
-    )
+  function handleKeyNew(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmitNew() }
   }
 
   return (
-    <div className="pb-36">
+    <div className="pb-24">
       {/* 헤더 */}
       <div className="px-5 pt-8 pb-4">
         <button onClick={() => navigate('/notices')} className="text-gray-400 text-sm mb-4">← 게시판</button>
@@ -177,10 +183,7 @@ export default function NoticeDetail() {
             </div>
           </div>
           {canDeletePost && (
-            <button
-              onClick={handleDeletePost}
-              className="shrink-0 text-xs text-red-400 border border-red-200 rounded-lg px-3 py-1.5"
-            >
+            <button onClick={handleDeletePost} className="shrink-0 text-xs text-red-400 border border-red-200 rounded-lg px-3 py-1.5">
               삭제
             </button>
           )}
@@ -193,49 +196,52 @@ export default function NoticeDetail() {
         <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{notice.content}</p>
       </div>
 
-      {/* 댓글 섹션 */}
-      <div className="px-5 mt-6">
+      {/* 댓글 */}
+      <div className="px-5 mt-6 mb-4">
         <div className="h-px bg-gray-100 mb-4" />
-        <p className="text-sm font-semibold text-gray-700 mb-4">
-          댓글 {comments.length}개
-        </p>
+        <p className="text-sm font-semibold text-gray-700 mb-4">댓글 {comments.length}개</p>
         {topLevel.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-4">첫 댓글을 남겨보세요</p>
         ) : (
           <div className="flex flex-col gap-4">
             {topLevel.map(comment => (
-              <CommentItem key={comment.id} comment={comment} />
+              <CommentItem
+                key={comment.id}
+                comment={comment}
+                replies={repliesFor(comment.id)}
+                isReply={false}
+                user={user}
+                replyToId={replyToId}
+                onReplyTo={setReplyToId}
+                onDelete={handleDeleteComment}
+                onSubmitReply={handleSubmitReply}
+              />
             ))}
           </div>
         )}
       </div>
 
-      <Nav />
-
-      {/* 댓글 입력 (Nav 위 고정) — replyTo 없을 때만 표시 */}
-      {!replyTo && (
-        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white border-t border-gray-100 px-4 py-3 pb-safe z-40"
-          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 56px)' }}
-        >
-          <div className="flex gap-2">
-            <input
-              ref={inputRef}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="댓글 입력..."
-              className="flex-1 bg-gray-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none"
-            />
-            <button
-              onClick={handleSubmit}
-              disabled={!input.trim()}
-              className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold disabled:opacity-40"
-            >
-              등록
-            </button>
-          </div>
+      {/* 새 댓글 입력창 — Nav 위에 고정 */}
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white border-t border-gray-100 px-4 py-3 z-40 pb-safe"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 60px)' }}
+      >
+        <div className="flex gap-2">
+          <input
+            value={newComment}
+            onChange={e => setNewComment(e.target.value)}
+            onKeyDown={handleKeyNew}
+            placeholder="댓글 입력..."
+            className="flex-1 bg-gray-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none"
+          />
+          <button
+            onClick={handleSubmitNew}
+            disabled={!newComment.trim()}
+            className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold disabled:opacity-40"
+          >
+            등록
+          </button>
         </div>
-      )}
+      </div>
     </div>
   )
 }

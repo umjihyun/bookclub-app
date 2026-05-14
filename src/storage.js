@@ -136,6 +136,17 @@ export function updateMember(id, updates) {
   fsUpdateMember(member.clubId, id, updates)
 }
 
+export function updateMemberRole(memberId, clubId, newRole) {
+  saveList(KEYS.members, getMembers().map(m => m.id === memberId ? { ...m, role: newRole } : m))
+  fsUpdateMember(clubId, memberId, { role: newRole })
+  const all = getMemberships()
+  const ms = all.find(m => m.memberId === memberId && m.clubId === clubId)
+  if (ms) {
+    saveList(KEYS.memberships, all.map(m => m.memberId === memberId && m.clubId === clubId ? { ...m, role: newRole } : m))
+    fsWriteMembership({ ...ms, role: newRole })
+  }
+}
+
 // ── Books ──────────────────────────────────────────────────────────────────
 export function getBooks() { return getList(KEYS.books) }
 export function getBooksByClub(clubId) { return getBooks().filter(b => b.clubId === clubId) }
