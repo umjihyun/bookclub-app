@@ -34,8 +34,8 @@ export default function RatingModal({ onSubmit, onSkip }) {
             건너뛰기
           </button>
           <button
-            onClick={() => onSubmit({ rating, review })}
-            disabled={rating === 0}
+            onClick={() => onSubmit({ rating: rating || null, review })}
+            disabled={!review.trim() && rating === 0}
             className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold disabled:opacity-40"
           >
             등록하기

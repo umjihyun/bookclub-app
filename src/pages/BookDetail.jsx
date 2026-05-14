@@ -91,6 +91,14 @@ export default function BookDetail() {
               >
                 {isRead ? '✓ 읽음' : '읽음으로 표시'}
               </button>
+              {isRead && (
+                <button
+                  onClick={() => setShowRating(true)}
+                  className="text-xs px-3 py-1.5 rounded-full font-medium bg-yellow-100 text-yellow-700"
+                >
+                  ★ 별점/리뷰
+                </button>
+              )}
               {user.role === 'admin' && (
                 <button
                   onClick={toggleDone}
@@ -125,9 +133,9 @@ export default function BookDetail() {
                         {mb?.read ? '읽음' : '안읽음'}
                       </span>
                     </div>
-                    {mb?.read && mb?.rating && (
+                    {mb?.read && (mb?.rating || mb?.review) && (
                       <div className="mt-0.5">
-                        <Stars n={mb.rating} />
+                        {mb.rating > 0 && <Stars n={mb.rating} />}
                         {mb.review && <p className="text-xs text-gray-500 mt-0.5 leading-snug">{mb.review}</p>}
                       </div>
                     )}
