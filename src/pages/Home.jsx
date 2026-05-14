@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   getCurrentUser, getClubById, getMembersByClub, getBooksByClub,
-  getMeetingsByClub, getNoticesByClub, getVoteRoundsByClub, clearCurrentUser,
-  getVoteCandidatesByRound
+  getMeetingsByClub, getMeetingResponsesByMeeting, getNoticesByClub,
+  getVoteRoundsByClub, clearCurrentUser, getVoteCandidatesByRound
 } from '../storage'
 import Nav from '../components/Nav'
 
@@ -98,42 +98,38 @@ export default function Home() {
       )}
 
       {/* 상단 헤더 */}
-      <div className="px-5 pt-10 pb-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900 truncate mr-2">{club?.name || '내 북클럽'}</h1>
-        <button onClick={() => setShowMenu(true)} className="p-1.5 -mr-1 shrink-0">
-          <HamburgerIcon />
-        </button>
-      </div>
-
-      {/* 클럽 프로필 */}
-      <div className="px-5 pb-4">
+      <div className="px-5 pt-10 pb-4 flex items-center justify-between gap-2">
         <div
+          className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
           onClick={() => navigate('/club')}
-          className="cursor-pointer"
         >
-          {/* 대표 이미지 */}
-          <div className="w-full h-32 rounded-2xl overflow-hidden mb-3">
+          {/* 프로필 원형 이미지 */}
+          <div className="w-11 h-11 rounded-full overflow-hidden shrink-0">
             {club?.imageUrl ? (
               <img src={club.imageUrl} alt="" className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-32 rounded-2xl bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
-                <span className="text-5xl font-bold text-white/50">{club?.name?.[0] || '📚'}</span>
+              <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+                <span className="text-lg font-bold text-white">{club?.name?.[0] || '📚'}</span>
               </div>
             )}
           </div>
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-400">
-              멤버 {members.length}명 · 읽은 책 {doneBooks}권
-            </p>
-            {user.role === 'admin' && (
-              <button
-                onClick={e => { e.stopPropagation(); navigate('/club/edit') }}
-                className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500"
-              >
-                수정하기
-              </button>
-            )}
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-gray-900 truncate">{club?.name || '내 북클럽'}</h1>
+            <p className="text-xs text-gray-400">멤버 {members.length}명 · 읽은 책 {doneBooks}권</p>
           </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {user.role === 'admin' && (
+            <button
+              onClick={() => navigate('/club/edit')}
+              className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-500"
+            >
+              수정
+            </button>
+          )}
+          <button onClick={() => setShowMenu(true)} className="p-1.5 -mr-1">
+            <HamburgerIcon />
+          </button>
         </div>
       </div>
 
@@ -168,16 +164,34 @@ export default function Home() {
           className={`rounded-2xl p-4 ${nextMeeting ? 'bg-green-50 cursor-pointer' : 'bg-gray-50'}`}
         >
           <p className="text-xs font-medium text-gray-400 mb-1">다음 일정</p>
-          {nextMeeting ? (
-            <div>
-              <p className="font-semibold text-gray-900">{nextMeeting.name}</p>
-              <p className="text-xs text-gray-500 mt-0.5">
-                {nextMeeting.status === 'confirmed' && nextMeeting.confirmedSlot
-                  ? `확정: ${nextMeeting.confirmedSlot.date} ${String(nextMeeting.confirmedSlot.hour).padStart(2, '0')}:00`
-                  : `날짜 ${(nextMeeting.dates || []).length}개 · 응답 대기중`}
-              </p>
-            </div>
-          ) : (
+          {nextMeeting ? (() => {
+            const responses = getMeetingResponsesByMeeting(nextMeeting.id)
+            const resCount = responses.length
+            const total = members.length
+            return (
+              <div>
+                <p className="font-semibold text-gray-900">{nextMeeting.name}</p>
+                {nextMeeting.status === 'confirmed' && nextMeeting.confirmedSlot ? (
+                  <p className="text-xs text-green-600 font-medium mt-0.5">
+                    확정: {nextMeeting.confirmedSlot.date} {String(nextMeeting.confirmedSlot.hour).padStart(2, '0')}:00
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between mt-1.5">
+                      <span className="text-xs text-gray-400">응답 완료</span>
+                      <span className="text-xs font-medium text-gray-600">{resCount}/{total}명</span>
+                    </div>
+                    <div className="mt-1 h-1.5 bg-green-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-green-400 rounded-full transition-all"
+                        style={{ width: total > 0 ? `${(resCount / total) * 100}%` : '0%' }}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            )
+          })() : (
             <p className="text-gray-400 text-sm">예정된 모임이 없어요</p>
           )}
         </section>
@@ -189,7 +203,12 @@ export default function Home() {
         >
           <p className="text-xs font-medium text-gray-400 mb-1">최신 게시글</p>
           {latestNotice ? (
-            <p className="font-semibold text-gray-900 text-sm leading-snug line-clamp-2">{latestNotice.title}</p>
+            <div>
+              <p className="font-semibold text-gray-900 text-sm leading-snug truncate">{latestNotice.title}</p>
+              {latestNotice.content && (
+                <p className="text-xs text-gray-500 mt-1 leading-snug line-clamp-2">{latestNotice.content}</p>
+              )}
+            </div>
           ) : (
             <p className="text-gray-400 text-sm">게시글이 없어요</p>
           )}
