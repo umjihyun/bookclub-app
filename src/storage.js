@@ -80,6 +80,21 @@ export function getClubByCode(code) {
   return getClubs().find(c => c.code.toUpperCase() === code.toUpperCase()) || null
 }
 
+export function saveClubLocally(clubData) {
+  const clubs = getClubs()
+  if (clubs.find(c => c.id === clubData.id)) return clubs.find(c => c.id === clubData.id)
+  const club = {
+    id: clubData.id,
+    name: clubData.name,
+    code: clubData.code,
+    maxMembers: clubData.maxMembers,
+    imageUrl: clubData.imageUrl || '',
+    createdAt: clubData.createdAt,
+  }
+  saveList(KEYS.clubs, [...clubs, club])
+  return club
+}
+
 export function getClubById(id) {
   return getClubs().find(c => c.id === id) || null
 }

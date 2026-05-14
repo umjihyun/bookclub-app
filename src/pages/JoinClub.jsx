@@ -1,30 +1,56 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getClubByCode, getMembersByClub, createMember, createUser, setCurrentUser } from '../storage'
+import { getClubByCode, getMembersByClub, createMember, createUser, setCurrentUser, saveClubLocally } from '../storage'
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '../firebase'
 
 export default function JoinClub() {
   const navigate = useNavigate()
   const [form, setForm] = useState({ code: '', name: '', pin: '' })
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     setError('')
-    const club = getClubByCode(form.code.trim())
+    setLoading(true)
+
+    const code = form.code.trim().toUpperCase()
+
+    // 1. 로컬에서 먼저 찾기
+    let club = getClubByCode(code)
+
+    // 2. 없으면 Firestore에서 찾기
+    if (!club) {
+      try {
+        const snap = await getDoc(doc(db, 'clubs_by_code', code))
+        if (snap.exists()) {
+          club = saveClubLocally(snap.data())
+        }
+      } catch (err) {
+        console.error(err)
+      }
+    }
+
     if (!club) {
       setError('유효하지 않은 코드예요.')
+      setLoading(false)
       return
     }
+
     const members = getMembersByClub(club.id)
     if (members.length >= club.maxMembers) {
       setError('멤버가 꽉 찼어요.')
+      setLoading(false)
       return
     }
     const duplicate = members.find(m => m.name === form.name.trim())
     if (duplicate) {
       setError('이미 같은 닉네임의 멤버가 있어요.')
+      setLoading(false)
       return
     }
+
     const member = createMember({ name: form.name.trim(), clubId: club.id, role: 'member' })
     createUser({ nickname: form.name.trim(), pin: form.pin, clubId: club.id, memberId: member.id, role: 'member' })
     setCurrentUser({ name: member.name, clubId: club.id, memberId: member.id, role: 'member' })
@@ -72,10 +98,10 @@ export default function JoinClub() {
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <button
           type="submit"
-          disabled={!form.code.trim() || !form.name.trim() || form.pin.length !== 4}
+          disabled={!form.code.trim() || !form.name.trim() || form.pin.length !== 4 || loading}
           className="w-full py-4 bg-blue-600 text-white rounded-2xl text-base font-semibold mt-2 disabled:opacity-40"
         >
-          입장하기
+          {loading ? '확인 중…' : '입장하기'}
         </button>
       </form>
     </div>

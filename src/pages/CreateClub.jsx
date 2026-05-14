@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createClub, createMember, createUser, setCurrentUser } from '../storage'
 import CodeModal from '../components/CodeModal'
+import { doc, setDoc } from 'firebase/firestore'
+import { db } from '../firebase'
 
 export default function CreateClub() {
   const navigate = useNavigate()
@@ -16,6 +18,17 @@ export default function CreateClub() {
     const member = createMember({ name: form.myName.trim(), clubId: club.id, role: 'admin' })
     createUser({ nickname: form.myName.trim(), pin: form.pin, clubId: club.id, memberId: member.id, role: 'admin' })
     setCurrentUser({ name: member.name, clubId: club.id, memberId: member.id, role: 'admin' })
+
+    // Firestore에 코드 저장 (다른 기기에서 코드로 참여 가능하도록)
+    setDoc(doc(db, 'clubs_by_code', club.code), {
+      id: club.id,
+      name: club.name,
+      code: club.code,
+      maxMembers: club.maxMembers,
+      imageUrl: club.imageUrl || '',
+      createdAt: club.createdAt,
+    }).catch(console.error)
+
     setCreatedCode(club.code)
   }
 
