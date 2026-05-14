@@ -26,11 +26,11 @@ export default function ClubInfo() {
 
       {/* 대표 이미지 */}
       <div className="px-5 mt-2 mb-4">
-        <div className="w-full h-44 rounded-2xl overflow-hidden">
+        <div className="w-full rounded-2xl overflow-hidden">
           {club?.imageUrl ? (
-            <img src={club.imageUrl} alt="" className="w-full h-full object-cover" />
+            <img src={club.imageUrl} alt="" className="w-full h-auto block" />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+            <div className="w-full h-44 bg-gradient-to-br from-blue-400 to-purple-500 rounded-2xl flex items-center justify-center">
               <span className="text-7xl font-bold text-white/40">{club?.name?.[0] || '📚'}</span>
             </div>
           )}

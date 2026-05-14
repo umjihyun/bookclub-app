@@ -6,6 +6,7 @@ const KEYS = {
   meetings: 'bc_meetings',
   meetingResponses: 'bc_meeting_responses',
   notices: 'bc_notices',
+  comments: 'bc_comments',
   voteRounds: 'bc_vote_rounds',
   voteCandidates: 'bc_vote_candidates',
   voteHearts: 'bc_vote_hearts',
@@ -231,6 +232,39 @@ export function createNotice({ clubId, title, content, authorId, isNotice = fals
 
 export function deleteNotice(id) {
   saveList(KEYS.notices, getNotices().filter(n => n.id !== id))
+  saveList(KEYS.comments, getComments().filter(c => c.postId !== id))
+}
+
+// Comments
+export function getComments() {
+  return getList(KEYS.comments)
+}
+
+export function getCommentsByPost(postId) {
+  return getComments().filter(c => c.postId === postId).sort((a, b) => a.createdAt - b.createdAt)
+}
+
+export function createComment({ postId, parentId = null, authorId, content }) {
+  const all = getComments()
+  const comment = { id: uid(), postId, parentId, authorId, content, createdAt: Date.now() }
+  saveList(KEYS.comments, [...all, comment])
+  return comment
+}
+
+export function deleteComment(id) {
+  const all = getComments()
+  const toDelete = new Set([id])
+  let changed = true
+  while (changed) {
+    changed = false
+    all.forEach(c => {
+      if (c.parentId && toDelete.has(c.parentId) && !toDelete.has(c.id)) {
+        toDelete.add(c.id)
+        changed = true
+      }
+    })
+  }
+  saveList(KEYS.comments, all.filter(c => !toDelete.has(c.id)))
 }
 
 // VoteRounds
