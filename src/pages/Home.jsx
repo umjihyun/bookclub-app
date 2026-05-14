@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   getCurrentUser, getClubById, getMembersByClub, getBooksByClub,
   getMeetingsByClub, getMeetingResponsesByMeeting, getNoticesByClub,
-  getVoteRoundsByClub, clearCurrentUser, getVoteCandidatesByRound
+  getVoteRoundsByClub, clearCurrentUser, clearCurrentClub, getVoteCandidatesByRound
 } from '../storage'
 import Nav from '../components/Nav'
 
@@ -43,11 +43,17 @@ export default function Home() {
     })
   }
 
+  function switchClub() {
+    setShowMenu(false)
+    clearCurrentClub()
+    navigate('/clubs', { replace: true })
+  }
+
   function logout() {
     setShowMenu(false)
-    if (confirm('북클럽에서 나가시겠어요?')) {
+    if (confirm('로그아웃 하시겠어요?')) {
       clearCurrentUser()
-      navigate('/', { replace: true })
+      navigate('/login', { replace: true })
     }
   }
 
@@ -79,6 +85,13 @@ export default function Home() {
             {/* 메뉴 항목 */}
             <div className="flex-1 px-3 pt-2">
               <button
+                onClick={switchClub}
+                className="w-full text-left flex items-center gap-3 px-4 py-3.5 rounded-xl text-gray-700 active:bg-gray-50"
+              >
+                <span className="text-xl">🏠</span>
+                <span className="font-medium">다른 북클럽</span>
+              </button>
+              <button
                 onClick={() => { setShowMenu(false); navigate('/settings') }}
                 className="w-full text-left flex items-center gap-3 px-4 py-3.5 rounded-xl text-gray-700 active:bg-gray-50"
               >
@@ -90,7 +103,7 @@ export default function Home() {
                 className="w-full text-left flex items-center gap-3 px-4 py-3.5 rounded-xl text-red-500 active:bg-red-50"
               >
                 <span className="text-xl">🚪</span>
-                <span className="font-medium">나가기</span>
+                <span className="font-medium">로그아웃</span>
               </button>
             </div>
           </div>

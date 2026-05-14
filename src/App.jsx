@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { getCurrentUser } from './storage'
 import Splash from './pages/Splash'
 import Login from './pages/Login'
+import ClubSelect from './pages/ClubSelect'
 import CreateClub from './pages/CreateClub'
 import JoinClub from './pages/JoinClub'
 import Home from './pages/Home'
@@ -22,9 +23,18 @@ import Settings from './pages/Settings'
 import ClubInfo from './pages/ClubInfo'
 import EditClub from './pages/EditClub'
 
+// 로그인만 필요
 function RequireUser({ children }) {
   const user = getCurrentUser()
-  if (!user) return <Navigate to="/" replace />
+  if (!user) return <Navigate to="/login" replace />
+  return children
+}
+
+// 로그인 + 활성 클럽 필요
+function RequireClub({ children }) {
+  const user = getCurrentUser()
+  if (!user) return <Navigate to="/login" replace />
+  if (!user.clubId) return <Navigate to="/clubs" replace />
   return children
 }
 
@@ -34,25 +44,26 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Splash />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/create" element={<CreateClub />} />
-        <Route path="/join" element={<JoinClub />} />
-        <Route path="/home" element={<RequireUser><Home /></RequireUser>} />
-        <Route path="/books" element={<RequireUser><BookShelf /></RequireUser>} />
-        <Route path="/books/add" element={<RequireUser><AddBook /></RequireUser>} />
-        <Route path="/books/:bookId" element={<RequireUser><BookDetail /></RequireUser>} />
-        <Route path="/schedule" element={<RequireUser><ScheduleList /></RequireUser>} />
-        <Route path="/schedule/create" element={<RequireUser><CreateSchedule /></RequireUser>} />
-        <Route path="/schedule/:meetingId/result" element={<RequireUser><ScheduleResult /></RequireUser>} />
-        <Route path="/schedule/:meetingId" element={<RequireUser><ScheduleResponse /></RequireUser>} />
-        <Route path="/vote" element={<RequireUser><VoteList /></RequireUser>} />
-        <Route path="/vote/propose" element={<RequireUser><ProposeBook /></RequireUser>} />
-        <Route path="/vote/:candidateId" element={<RequireUser><CandidateDetail /></RequireUser>} />
-        <Route path="/notices" element={<RequireUser><NoticeList /></RequireUser>} />
-        <Route path="/notices/create" element={<RequireUser><CreateNotice /></RequireUser>} />
-        <Route path="/notices/:noticeId" element={<RequireUser><NoticeDetail /></RequireUser>} />
+        <Route path="/clubs" element={<RequireUser><ClubSelect /></RequireUser>} />
+        <Route path="/create" element={<RequireUser><CreateClub /></RequireUser>} />
+        <Route path="/join" element={<RequireUser><JoinClub /></RequireUser>} />
+        <Route path="/home" element={<RequireClub><Home /></RequireClub>} />
+        <Route path="/books" element={<RequireClub><BookShelf /></RequireClub>} />
+        <Route path="/books/add" element={<RequireClub><AddBook /></RequireClub>} />
+        <Route path="/books/:bookId" element={<RequireClub><BookDetail /></RequireClub>} />
+        <Route path="/schedule" element={<RequireClub><ScheduleList /></RequireClub>} />
+        <Route path="/schedule/create" element={<RequireClub><CreateSchedule /></RequireClub>} />
+        <Route path="/schedule/:meetingId/result" element={<RequireClub><ScheduleResult /></RequireClub>} />
+        <Route path="/schedule/:meetingId" element={<RequireClub><ScheduleResponse /></RequireClub>} />
+        <Route path="/vote" element={<RequireClub><VoteList /></RequireClub>} />
+        <Route path="/vote/propose" element={<RequireClub><ProposeBook /></RequireClub>} />
+        <Route path="/vote/:candidateId" element={<RequireClub><CandidateDetail /></RequireClub>} />
+        <Route path="/notices" element={<RequireClub><NoticeList /></RequireClub>} />
+        <Route path="/notices/create" element={<RequireClub><CreateNotice /></RequireClub>} />
+        <Route path="/notices/:noticeId" element={<RequireClub><NoticeDetail /></RequireClub>} />
         <Route path="/settings" element={<RequireUser><Settings /></RequireUser>} />
-        <Route path="/club" element={<RequireUser><ClubInfo /></RequireUser>} />
-        <Route path="/club/edit" element={<RequireUser><EditClub /></RequireUser>} />
+        <Route path="/club" element={<RequireClub><ClubInfo /></RequireClub>} />
+        <Route path="/club/edit" element={<RequireClub><EditClub /></RequireClub>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

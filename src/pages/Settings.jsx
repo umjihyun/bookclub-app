@@ -5,7 +5,7 @@ import { getCurrentUser, getUserByMemberId, updateUserProfile } from '../storage
 export default function Settings() {
   const navigate = useNavigate()
   const user = getCurrentUser()
-  const stored = getUserByMemberId(user.memberId)
+  const stored = getUserByMemberId(user.memberId) || { pin: '' }
 
   const [nickname, setNickname] = useState(user.name)
   const [newPin, setNewPin] = useState('')
@@ -32,7 +32,7 @@ export default function Settings() {
       }
     }
 
-    updateUserProfile(user.memberId, {
+    updateUserProfile(user.userId || user.memberId, {
       nickname: nickname.trim(),
       pin: newPin || stored?.pin || '',
     })

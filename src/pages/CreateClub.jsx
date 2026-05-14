@@ -1,32 +1,30 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createClub, createMember, createUser, setCurrentUser } from '../storage'
+import { getCurrentUser, createClub, createMember, addMembership, setCurrentClub } from '../storage'
 import CodeModal from '../components/CodeModal'
+import ImageUpload from '../components/ImageUpload'
 import { doc, setDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 
 export default function CreateClub() {
   const navigate = useNavigate()
-  const [form, setForm] = useState({ clubName: '', maxMembers: '', myName: '', pin: '' })
+  const user = getCurrentUser()
+  const [form, setForm] = useState({ clubName: '', maxMembers: '', imageUrl: '' })
   const [createdCode, setCreatedCode] = useState(null)
 
   function handleSubmit(e) {
     e.preventDefault()
-    if (!form.clubName.trim() || !form.myName.trim() || !form.maxMembers || form.pin.length !== 4) return
+    if (!form.clubName.trim() || !form.maxMembers) return
 
-    const club = createClub({ name: form.clubName.trim(), maxMembers: form.maxMembers })
-    const member = createMember({ name: form.myName.trim(), clubId: club.id, role: 'admin' })
-    createUser({ nickname: form.myName.trim(), pin: form.pin, clubId: club.id, memberId: member.id, role: 'admin' })
-    setCurrentUser({ name: member.name, clubId: club.id, memberId: member.id, role: 'admin' })
+    const club = createClub({ name: form.clubName.trim(), maxMembers: form.maxMembers, imageUrl: form.imageUrl })
+    const member = createMember({ name: user.name, clubId: club.id, role: 'admin' })
+    addMembership({ userId: user.userId, clubId: club.id, memberId: member.id, role: 'admin' })
+    setCurrentClub({ clubId: club.id, memberId: member.id, role: 'admin' })
 
-    // Firestore에 코드 저장 (다른 기기에서 코드로 참여 가능하도록)
+    // Firestore에 코드 저장 (다른 기기에서 코드로 참여 가능)
     setDoc(doc(db, 'clubs_by_code', club.code), {
-      id: club.id,
-      name: club.name,
-      code: club.code,
-      maxMembers: club.maxMembers,
-      imageUrl: club.imageUrl || '',
-      createdAt: club.createdAt,
+      id: club.id, name: club.name, code: club.code,
+      maxMembers: club.maxMembers, imageUrl: club.imageUrl || '', createdAt: club.createdAt,
     }).catch(console.error)
 
     setCreatedCode(club.code)
@@ -38,11 +36,20 @@ export default function CreateClub() {
 
   return (
     <div className="min-h-screen px-6 py-10">
-      <button onClick={() => navigate(-1)} className="text-gray-400 mb-6 text-sm">← 뒤로</button>
-      <h1 className="text-2xl font-bold mb-8">북클럽 만들기</h1>
+      <button onClick={() => navigate('/clubs')} className="text-gray-400 mb-6 text-sm">← 뒤로</button>
+      <h1 className="text-2xl font-bold mb-6">북클럽 만들기</h1>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">북클럽 이름</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">대표 이미지</label>
+          <ImageUpload
+            value={form.imageUrl}
+            onChange={url => setForm(f => ({ ...f, imageUrl: url }))}
+            label="대표 이미지 업로드"
+            aspect="landscape"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">북클럽 이름 <span className="text-red-400">*</span></label>
           <input
             type="text"
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-400"
@@ -52,7 +59,7 @@ export default function CreateClub() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">최대 멤버 수</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">최대 멤버 수 <span className="text-red-400">*</span></label>
           <input
             type="number"
             min={1}
@@ -63,33 +70,11 @@ export default function CreateClub() {
             onChange={e => setForm(f => ({ ...f, maxMembers: e.target.value }))}
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">내 닉네임</label>
-          <input
-            type="text"
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-400"
-            placeholder="예: 김독서"
-            value={form.myName}
-            onChange={e => setForm(f => ({ ...f, myName: e.target.value }))}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">비밀번호 (숫자 4자리)</label>
-          <input
-            type="password"
-            inputMode="numeric"
-            maxLength={4}
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-400"
-            placeholder="••••"
-            value={form.pin}
-            onChange={e => setForm(f => ({ ...f, pin: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
-          />
-          <p className="text-xs text-gray-400 mt-1">다음에 로그인할 때 사용해요</p>
-        </div>
+        <p className="text-xs text-gray-400">관리자: {user?.name}</p>
         <button
           type="submit"
+          disabled={!form.clubName.trim() || !form.maxMembers}
           className="w-full py-4 bg-blue-600 text-white rounded-2xl text-base font-semibold mt-2 disabled:opacity-40"
-          disabled={!form.clubName.trim() || !form.myName.trim() || !form.maxMembers || form.pin.length !== 4}
         >
           만들기
         </button>

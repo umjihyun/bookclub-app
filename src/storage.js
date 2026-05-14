@@ -12,7 +12,9 @@ const KEYS = {
   voteHearts: 'bc_vote_hearts',
   minutes: 'bc_minutes',
   currentUser: 'bc_current_user',
+  currentClub: 'bc_current_club',
   users: 'bc_users',
+  memberships: 'bc_memberships',
 }
 
 function get(key) {
@@ -47,17 +49,38 @@ function genCode() {
   return code
 }
 
-// Current user
+// Current user + club session
 export function getCurrentUser() {
-  return get(KEYS.currentUser)
+  const user = get(KEYS.currentUser)
+  if (!user) return null
+  const club = get(KEYS.currentClub)
+  // Normalize: always expose userId (backward compat: old format had memberId but no userId)
+  const userId = user.userId || user.memberId || user.id
+  return { userId, ...user, ...(club || {}) }
 }
 
 export function setCurrentUser(user) {
-  set(KEYS.currentUser, user)
+  // Store only login identity (not club info)
+  if (user.userId) {
+    set(KEYS.currentUser, { userId: user.userId, name: user.name })
+  } else {
+    // Backward compat: old callers pass full object
+    set(KEYS.currentUser, user)
+    if (user.clubId) set(KEYS.currentClub, { clubId: user.clubId, memberId: user.memberId, role: user.role })
+  }
+}
+
+export function setCurrentClub({ clubId, memberId, role }) {
+  set(KEYS.currentClub, { clubId, memberId, role })
+}
+
+export function clearCurrentClub() {
+  localStorage.removeItem(KEYS.currentClub)
 }
 
 export function clearCurrentUser() {
   localStorage.removeItem(KEYS.currentUser)
+  localStorage.removeItem(KEYS.currentClub)
 }
 
 // Clubs
@@ -391,32 +414,70 @@ export function getUsers() {
   return getList(KEYS.users)
 }
 
-export function createUser({ nickname, pin, clubId, memberId, role }) {
+export function createUser({ nickname, pin }) {
   const users = getUsers()
-  const existing = users.findIndex(u => u.nickname === nickname)
-  const user = { id: uid(), nickname, pin, clubId, memberId, role }
-  if (existing >= 0) {
-    const next = [...users]
-    next[existing] = { ...users[existing], ...user }
-    saveList(KEYS.users, next)
-  } else {
-    saveList(KEYS.users, [...users, user])
+  const existing = users.find(u => u.nickname === nickname)
+  if (existing) {
+    saveList(KEYS.users, users.map(u => u.nickname === nickname ? { ...u, pin } : u))
+    return existing
   }
+  const user = { id: uid(), nickname, pin }
+  saveList(KEYS.users, [...users, user])
   return user
 }
 
 export function verifyUser(nickname, pin) {
-  const user = getUsers().find(u => u.nickname === nickname && u.pin === pin)
-  return user || null
+  return getUsers().find(u => u.nickname === nickname && u.pin === pin) || null
 }
 
 export function getUserByMemberId(memberId) {
+  // Check memberships first
+  const m = getMemberships().find(m => m.memberId === memberId)
+  if (m) return getUsers().find(u => u.id === m.userId) || null
+  // Backward compat: old users had memberId stored in bc_users
   return getUsers().find(u => u.memberId === memberId) || null
 }
 
-export function updateUserProfile(memberId, { nickname, pin }) {
-  saveList(KEYS.users, getUsers().map(u => u.memberId === memberId ? { ...u, nickname, pin } : u))
-  updateMember(memberId, { name: nickname })
-  const cur = getCurrentUser()
-  if (cur?.memberId === memberId) setCurrentUser({ ...cur, name: nickname })
+export function updateUserProfile(userId, { nickname, pin }) {
+  saveList(KEYS.users, getUsers().map(u => u.id === userId ? { ...u, nickname, pin } : u))
+  // Update all member names for this user's memberships
+  getMemberships().filter(m => m.userId === userId).forEach(m => updateMember(m.memberId, { name: nickname }))
+  // Backward compat: old users had memberId in bc_users
+  const oldUser = getUsers().find(u => u.id === userId)
+  if (oldUser?.memberId) updateMember(oldUser.memberId, { name: nickname })
+  // Update currentUser name
+  const cur = get(KEYS.currentUser)
+  if (cur && (cur.userId === userId || cur.id === userId)) set(KEYS.currentUser, { ...cur, name: nickname })
+}
+
+// Memberships (user ↔ club many-to-many)
+export function getMemberships() {
+  return getList(KEYS.memberships)
+}
+
+export function getUserMemberships(userId) {
+  if (!userId) return []
+  const direct = getMemberships().filter(m => m.userId === userId)
+
+  // Backward compat: old users had clubId/memberId stored in bc_users
+  const user = getUsers().find(u => u.id === userId || u.memberId === userId)
+  if (user?.clubId && user?.memberId) {
+    if (!direct.find(m => m.clubId === user.clubId)) {
+      return [...direct, { userId, clubId: user.clubId, memberId: user.memberId, role: user.role || 'member' }]
+    }
+  }
+  // Also check old bc_current_user format
+  const cur = get(KEYS.currentUser)
+  if (cur && (cur.userId === userId || cur.memberId === userId) && cur.clubId) {
+    if (!direct.find(m => m.clubId === cur.clubId)) {
+      return [...direct, { userId, clubId: cur.clubId, memberId: cur.memberId, role: cur.role || 'member' }]
+    }
+  }
+  return direct
+}
+
+export function addMembership({ userId, clubId, memberId, role }) {
+  const all = getMemberships()
+  if (all.find(m => m.userId === userId && m.clubId === clubId)) return
+  saveList(KEYS.memberships, [...all, { userId, clubId, memberId, role }])
 }
