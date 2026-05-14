@@ -214,11 +214,15 @@ export function getNoticeById(id) {
   return getNotices().find(n => n.id === id) || null
 }
 
-export function createNotice({ clubId, title, content, authorId }) {
+export function createNotice({ clubId, title, content, authorId, isNotice = false }) {
   const notices = getNotices()
-  const notice = { id: uid(), clubId, title, content, authorId, createdAt: Date.now() }
+  const notice = { id: uid(), clubId, title, content, authorId, isNotice, createdAt: Date.now() }
   saveList(KEYS.notices, [...notices, notice])
   return notice
+}
+
+export function deleteNotice(id) {
+  saveList(KEYS.notices, getNotices().filter(n => n.id !== id))
 }
 
 // VoteRounds
