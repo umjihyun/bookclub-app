@@ -11,6 +11,7 @@ const KEYS = {
   voteHearts: 'bc_vote_hearts',
   minutes: 'bc_minutes',
   currentUser: 'bc_current_user',
+  users: 'bc_users',
 }
 
 function get(key) {
@@ -40,8 +41,8 @@ function uid() {
 
 function genCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  let code = 'BC-'
-  for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)]
+  let code = ''
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)]
   return code
 }
 
@@ -322,4 +323,28 @@ export function addMinutes({ bookId, clubId, fileName, fileData, uploaderId }) {
   const m = { id: uid(), bookId, clubId, fileName, fileData, uploaderId, uploadedAt: Date.now() }
   saveList(KEYS.minutes, [...all, m])
   return m
+}
+
+// Users (for login persistence)
+export function getUsers() {
+  return getList(KEYS.users)
+}
+
+export function createUser({ nickname, pin, clubId, memberId, role }) {
+  const users = getUsers()
+  const existing = users.findIndex(u => u.nickname === nickname)
+  const user = { id: uid(), nickname, pin, clubId, memberId, role }
+  if (existing >= 0) {
+    const next = [...users]
+    next[existing] = { ...users[existing], ...user }
+    saveList(KEYS.users, next)
+  } else {
+    saveList(KEYS.users, [...users, user])
+  }
+  return user
+}
+
+export function verifyUser(nickname, pin) {
+  const user = getUsers().find(u => u.nickname === nickname && u.pin === pin)
+  return user || null
 }

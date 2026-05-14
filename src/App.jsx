@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { getCurrentUser } from './storage'
 import Splash from './pages/Splash'
+import Login from './pages/Login'
 import CreateClub from './pages/CreateClub'
 import JoinClub from './pages/JoinClub'
 import Home from './pages/Home'
@@ -29,6 +30,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Splash />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/create" element={<CreateClub />} />
         <Route path="/join" element={<JoinClub />} />
         <Route path="/home" element={<RequireUser><Home /></RequireUser>} />
