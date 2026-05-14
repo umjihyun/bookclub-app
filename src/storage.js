@@ -5,7 +5,7 @@ import {
   fsWriteMeetingResponse, fsWriteNotice, fsDeleteNotice,
   fsWriteComment, fsDeleteComments, fsWriteVoteRound,
   fsUpdateVoteRound, fsWriteVoteCandidate, fsDeleteVoteCandidate,
-  fsUpdateVoteCandidate, fsToggleHeart,
+  fsUpdateVoteCandidate, fsToggleHeart, fsDeleteClub,
 } from './fsOps'
 
 const KEYS = {
@@ -102,6 +102,26 @@ export function createClub({ name, maxMembers, imageUrl = '' }) {
   fsWriteClub(club)
   return club
 }
+export function deleteClub(clubId) {
+  const club = getClubById(clubId)
+  if (!club) return
+  // localStorage 정리
+  saveList(KEYS.clubs, getClubs().filter(c => c.id !== clubId))
+  saveList(KEYS.members, getMembers().filter(m => m.clubId !== clubId))
+  saveList(KEYS.books, getBooks().filter(b => b.clubId !== clubId))
+  saveList(KEYS.meetings, getMeetings().filter(m => m.clubId !== clubId))
+  saveList(KEYS.notices, getNotices().filter(n => n.clubId !== clubId))
+  saveList(KEYS.voteRounds, getVoteRounds().filter(r => r.clubId !== clubId))
+  saveList(KEYS.voteCandidates, getVoteCandidates().filter(c => c.clubId !== clubId))
+  saveList(KEYS.memberships, getMemberships().filter(m => m.clubId !== clubId))
+  localStorage.removeItem(`bc_migrated_${clubId}`)
+  // 현재 활성 클럽이면 세션 초기화
+  const cur = get(KEYS.currentClub)
+  if (cur?.clubId === clubId) clearCurrentClub()
+  // Firestore 삭제 (비동기)
+  fsDeleteClub(clubId, club.code)
+}
+
 export function updateClub(id, updates) {
   const club = getClubs().find(c => c.id === id)
   if (!club) return

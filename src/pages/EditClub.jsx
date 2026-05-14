@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getCurrentUser, getClubById, getMembersByClub, getBooksByClub, updateClub, updateMemberRole } from '../storage'
+import { getCurrentUser, getClubById, getMembersByClub, getBooksByClub, updateClub, updateMemberRole, deleteClub } from '../storage'
 import ImageUpload from '../components/ImageUpload'
 
 const ROLES = ['member', 'admin', 'superadmin']
@@ -15,6 +15,13 @@ export default function EditClub() {
   const navigate = useNavigate()
   const user = getCurrentUser()
   const club = getClubById(user.clubId)
+
+  function handleDeleteClub() {
+    if (!confirm(`"${club?.name}" 북클럽을 완전히 삭제하시겠어요?\n모든 책, 일정, 투표, 게시글이 영구 삭제됩니다.`)) return
+    if (!confirm('정말요? 되돌릴 수 없어요.')) return
+    deleteClub(user.clubId)
+    navigate('/clubs', { replace: true })
+  }
   const books = getBooksByClub(user.clubId)
   const doneBooks = books.filter(b => b.status === 'done').length
 
@@ -98,6 +105,19 @@ export default function EditClub() {
           ))}
         </div>
       </div>
+      {/* 슈퍼관리자 전용: 북클럽 삭제 */}
+      {user.role === 'superadmin' && (
+        <div className="mt-8 border border-red-200 rounded-2xl p-4">
+          <p className="text-sm font-semibold text-red-500 mb-1">위험 구역</p>
+          <p className="text-xs text-gray-400 mb-3">북클럽을 삭제하면 모든 데이터가 영구적으로 사라져요.</p>
+          <button
+            onClick={handleDeleteClub}
+            className="w-full py-3 bg-red-500 text-white rounded-xl text-sm font-semibold"
+          >
+            북클럽 없애기
+          </button>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { db } from './firebase'
 import {
-  doc, setDoc, deleteDoc, updateDoc, writeBatch, collection, getDocs
+  doc, setDoc, deleteDoc, updateDoc, writeBatch, collection, getDocs, query, where
 } from 'firebase/firestore'
 
 function fw(promise) {
@@ -134,4 +134,31 @@ export function fsUpdateVoteCandidate(clubId, candidateId, updates) {
 export function fsToggleHeart(clubId, memberId, candidateId, add) {
   const ref = doc(db, 'clubs', clubId, 'voteHearts', `${memberId}_${candidateId}`)
   fw(add ? setDoc(ref, { memberId, candidateId, clubId }) : deleteDoc(ref))
+}
+
+// ── Delete Entire Club ─────────────────────────────
+export async function fsDeleteClub(clubId, code) {
+  const subs = ['members', 'books', 'memberBooks', 'meetings', 'meetingResponses',
+    'notices', 'comments', 'voteRounds', 'voteCandidates', 'voteHearts']
+  try {
+    const refs = []
+    for (const sub of subs) {
+      const snap = await getDocs(collection(db, 'clubs', clubId, sub))
+      snap.docs.forEach(d => refs.push(d.ref))
+    }
+    // memberships
+    const msSnap = await getDocs(query(collection(db, 'memberships'), where('clubId', '==', clubId)))
+    msSnap.docs.forEach(d => refs.push(d.ref))
+    refs.push(doc(db, 'clubs', clubId))
+    if (code) refs.push(doc(db, 'clubs_by_code', code))
+
+    const CHUNK = 499
+    for (let i = 0; i < refs.length; i += CHUNK) {
+      const batch = writeBatch(db)
+      refs.slice(i, i + CHUNK).forEach(r => batch.delete(r))
+      await batch.commit()
+    }
+  } catch (e) {
+    console.warn('[Firestore deleteClub]', e.message)
+  }
 }
