@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCurrentUser, getClubById, getMembersByClub, getBooksByClub, updateClub } from '../storage'
+import ImageUpload from '../components/ImageUpload'
 
 export default function EditClub() {
   const navigate = useNavigate()
@@ -33,30 +34,15 @@ export default function EditClub() {
       <h1 className="text-2xl font-bold mb-6">클럽 수정</h1>
 
       <form onSubmit={handleSave} className="flex flex-col gap-4 mb-10">
-        {/* 이미지 미리보기 */}
+        {/* 대표 이미지 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">대표 이미지 URL</label>
-          <input
-            type="text"
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-400"
-            placeholder="https://..."
+          <label className="block text-sm font-medium text-gray-700 mb-1">대표 이미지</label>
+          <ImageUpload
             value={imageUrl}
-            onChange={e => setImageUrl(e.target.value)}
+            onChange={setImageUrl}
+            label="대표 이미지 업로드"
+            aspect="landscape"
           />
-          <div className="mt-2 w-full h-28 rounded-xl overflow-hidden bg-gray-100">
-            {imageUrl ? (
-              <img
-                src={imageUrl}
-                alt="미리보기"
-                className="w-full h-full object-cover"
-                onError={e => { e.target.style.display = 'none' }}
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
-                <span className="text-4xl font-bold text-white/40">{name[0] || '📚'}</span>
-              </div>
-            )}
-          </div>
         </div>
 
         <div>
