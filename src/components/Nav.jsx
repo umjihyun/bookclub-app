@@ -5,7 +5,7 @@ const items = [
   { path: '/vote', label: '투표', icon: '🗳️' },
   { path: '/home', label: '홈', icon: '🏠' },
   { path: '/schedule', label: '일정', icon: '📅' },
-  { path: '/notices', label: '공지', icon: '📢' },
+  { path: '/notices', label: '게시판', icon: '📋' },
 ]
 
 export default function Nav() {
