@@ -18,6 +18,9 @@ import ProposeBook from './pages/ProposeBook'
 import NoticeList from './pages/NoticeList'
 import NoticeDetail from './pages/NoticeDetail'
 import CreateNotice from './pages/CreateNotice'
+import Settings from './pages/Settings'
+import ClubInfo from './pages/ClubInfo'
+import EditClub from './pages/EditClub'
 
 function RequireUser({ children }) {
   const user = getCurrentUser()
@@ -47,6 +50,9 @@ export default function App() {
         <Route path="/notices" element={<RequireUser><NoticeList /></RequireUser>} />
         <Route path="/notices/create" element={<RequireUser><CreateNotice /></RequireUser>} />
         <Route path="/notices/:noticeId" element={<RequireUser><NoticeDetail /></RequireUser>} />
+        <Route path="/settings" element={<RequireUser><Settings /></RequireUser>} />
+        <Route path="/club" element={<RequireUser><ClubInfo /></RequireUser>} />
+        <Route path="/club/edit" element={<RequireUser><EditClub /></RequireUser>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

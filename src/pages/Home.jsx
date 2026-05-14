@@ -7,12 +7,23 @@ import {
 } from '../storage'
 import Nav from '../components/Nav'
 
+function HamburgerIcon() {
+  return (
+    <div className="flex flex-col gap-[5px] w-5">
+      <span className="block h-0.5 bg-gray-700 rounded-full" />
+      <span className="block h-0.5 bg-gray-700 rounded-full" />
+      <span className="block h-0.5 bg-gray-700 rounded-full" />
+    </div>
+  )
+}
+
 export default function Home() {
   const navigate = useNavigate()
   const user = getCurrentUser()
   const club = getClubById(user.clubId)
   const members = getMembersByClub(user.clubId)
   const books = getBooksByClub(user.clubId)
+  const doneBooks = books.filter(b => b.status === 'done').length
   const currentBook = books.find(b => b.status === 'reading') || null
   const meetings = getMeetingsByClub(user.clubId).filter(m => m.status === 'open' || m.status === 'confirmed')
   const nextMeeting = meetings.sort((a, b) => a.createdAt - b.createdAt)[0] || null
@@ -22,7 +33,7 @@ export default function Home() {
   const activeRound = rounds.find(r => r.status === 'active') || null
   const activeCandidates = activeRound ? getVoteCandidatesByRound(activeRound.id) : []
 
-  const [showCode, setShowCode] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
   const [copied, setCopied] = useState(false)
 
   function copyCode() {
@@ -33,6 +44,7 @@ export default function Home() {
   }
 
   function logout() {
+    setShowMenu(false)
     if (confirm('북클럽에서 나가시겠어요?')) {
       clearCurrentUser()
       navigate('/', { replace: true })
@@ -41,35 +53,88 @@ export default function Home() {
 
   return (
     <div className="pb-24">
-      {/* Header */}
-      <div className="px-5 pt-10 pb-4">
-        <div className="flex items-start justify-between">
-          <div className="min-w-0 flex-1 mr-2">
-            <h1 className="text-xl font-bold text-gray-900 truncate">{club?.name || '내 북클럽'}</h1>
-            <p className="text-sm text-gray-400 mt-0.5">멤버 {members.length}명 · {user.role === 'admin' ? '관리자' : '멤버'}</p>
-          </div>
-          <div className="flex gap-2">
+      {/* 햄버거 드로어 */}
+      {showMenu && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowMenu(false)} />
+          <div className="relative w-72 bg-white h-full shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between px-5 pt-12 pb-4 border-b border-gray-100">
+              <span className="font-bold text-gray-900 truncate mr-2">{club?.name}</span>
+              <button onClick={() => setShowMenu(false)} className="text-gray-400 text-xl shrink-0">✕</button>
+            </div>
+
+            {/* 초대 코드 (관리자만) */}
             {user.role === 'admin' && (
-              <button
-                onClick={() => setShowCode(s => !s)}
-                className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600"
-              >
-                초대코드
-              </button>
+              <div className="px-5 py-4 border-b border-gray-100">
+                <p className="text-xs text-gray-400 mb-2">초대 코드</p>
+                <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
+                  <span className="font-mono font-bold text-blue-600 tracking-widest text-lg">{club?.code}</span>
+                  <button onClick={copyCode} className="text-xs text-blue-600 font-medium ml-3 shrink-0">
+                    {copied ? '복사됨 ✓' : '복사'}
+                  </button>
+                </div>
+              </div>
             )}
-            <button onClick={logout} className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500">
-              나가기
-            </button>
+
+            {/* 메뉴 항목 */}
+            <div className="flex-1 px-3 pt-2">
+              <button
+                onClick={() => { setShowMenu(false); navigate('/settings') }}
+                className="w-full text-left flex items-center gap-3 px-4 py-3.5 rounded-xl text-gray-700 active:bg-gray-50"
+              >
+                <span className="text-xl">⚙️</span>
+                <span className="font-medium">환경설정</span>
+              </button>
+              <button
+                onClick={logout}
+                className="w-full text-left flex items-center gap-3 px-4 py-3.5 rounded-xl text-red-500 active:bg-red-50"
+              >
+                <span className="text-xl">🚪</span>
+                <span className="font-medium">나가기</span>
+              </button>
+            </div>
           </div>
         </div>
-        {showCode && (
-          <div className="mt-3 bg-blue-50 rounded-xl p-3 flex items-center justify-between">
-            <span className="font-mono font-bold text-blue-700 text-lg tracking-wider">{club?.code}</span>
-            <button onClick={copyCode} className="text-xs text-blue-600 font-medium">
-              {copied ? '복사됨 ✓' : '복사'}
-            </button>
+      )}
+
+      {/* 상단 헤더 */}
+      <div className="px-5 pt-10 pb-3 flex items-center justify-between">
+        <h1 className="text-xl font-bold text-gray-900 truncate mr-2">{club?.name || '내 북클럽'}</h1>
+        <button onClick={() => setShowMenu(true)} className="p-1.5 -mr-1 shrink-0">
+          <HamburgerIcon />
+        </button>
+      </div>
+
+      {/* 클럽 프로필 */}
+      <div className="px-5 pb-4">
+        <div
+          onClick={() => navigate('/club')}
+          className="cursor-pointer"
+        >
+          {/* 대표 이미지 */}
+          <div className="w-full h-32 rounded-2xl overflow-hidden mb-3">
+            {club?.imageUrl ? (
+              <img src={club.imageUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-32 rounded-2xl bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+                <span className="text-5xl font-bold text-white/50">{club?.name?.[0] || '📚'}</span>
+              </div>
+            )}
           </div>
-        )}
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-400">
+              멤버 {members.length}명 · 읽은 책 {doneBooks}권
+            </p>
+            {user.role === 'admin' && (
+              <button
+                onClick={e => { e.stopPropagation(); navigate('/club/edit') }}
+                className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500"
+              >
+                수정하기
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="px-5 flex flex-col gap-4">
@@ -108,7 +173,7 @@ export default function Home() {
               <p className="font-semibold text-gray-900">{nextMeeting.name}</p>
               <p className="text-xs text-gray-500 mt-0.5">
                 {nextMeeting.status === 'confirmed' && nextMeeting.confirmedSlot
-                  ? `확정: ${nextMeeting.confirmedSlot.date} ${String(nextMeeting.confirmedSlot.hour).padStart(2,'0')}:00`
+                  ? `확정: ${nextMeeting.confirmedSlot.date} ${String(nextMeeting.confirmedSlot.hour).padStart(2, '0')}:00`
                   : `날짜 ${(nextMeeting.dates || []).length}개 · 응답 대기중`}
               </p>
             </div>
@@ -117,16 +182,16 @@ export default function Home() {
           )}
         </section>
 
-        {/* 최신 공지 */}
+        {/* 최신 게시글 */}
         <section
           onClick={() => latestNotice && navigate(`/notices/${latestNotice.id}`)}
           className={`rounded-2xl p-4 ${latestNotice ? 'bg-yellow-50 cursor-pointer' : 'bg-gray-50'}`}
         >
-          <p className="text-xs font-medium text-gray-400 mb-1">최신 공지</p>
+          <p className="text-xs font-medium text-gray-400 mb-1">최신 게시글</p>
           {latestNotice ? (
             <p className="font-semibold text-gray-900 text-sm leading-snug line-clamp-2">{latestNotice.title}</p>
           ) : (
-            <p className="text-gray-400 text-sm">공지가 없어요</p>
+            <p className="text-gray-400 text-sm">게시글이 없어요</p>
           )}
         </section>
 
@@ -138,7 +203,7 @@ export default function Home() {
           <p className="text-xs font-medium text-gray-400 mb-1">투표 현황</p>
           {activeRound ? (
             <p className="font-semibold text-gray-900 text-sm">
-              {activeRound.round}회차 진행중 · 후보 {activeCandidates.length}권
+              진행중 · 후보 {activeCandidates.length}권
             </p>
           ) : (
             <p className="text-gray-400 text-sm">진행중인 투표가 없어요</p>

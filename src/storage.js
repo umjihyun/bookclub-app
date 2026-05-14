@@ -71,6 +71,10 @@ export function createClub({ name, maxMembers }) {
   return club
 }
 
+export function updateClub(id, updates) {
+  saveList(KEYS.clubs, getClubs().map(c => c.id === id ? { ...c, ...updates } : c))
+}
+
 export function getClubByCode(code) {
   return getClubs().find(c => c.code.toUpperCase() === code.toUpperCase()) || null
 }
@@ -97,6 +101,10 @@ export function createMember({ name, clubId, role }) {
 
 export function getMemberById(id) {
   return getMembers().find(m => m.id === id) || null
+}
+
+export function updateMember(id, updates) {
+  saveList(KEYS.members, getMembers().map(m => m.id === id ? { ...m, ...updates } : m))
 }
 
 // Books
@@ -351,4 +359,15 @@ export function createUser({ nickname, pin, clubId, memberId, role }) {
 export function verifyUser(nickname, pin) {
   const user = getUsers().find(u => u.nickname === nickname && u.pin === pin)
   return user || null
+}
+
+export function getUserByMemberId(memberId) {
+  return getUsers().find(u => u.memberId === memberId) || null
+}
+
+export function updateUserProfile(memberId, { nickname, pin }) {
+  saveList(KEYS.users, getUsers().map(u => u.memberId === memberId ? { ...u, nickname, pin } : u))
+  updateMember(memberId, { name: nickname })
+  const cur = getCurrentUser()
+  if (cur?.memberId === memberId) setCurrentUser({ ...cur, name: nickname })
 }
