@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useSync } from '../RealtimeProvider'
 import {
   getCurrentUser, getBookById, getMembersByClub, getMemberBook,
   getMemberBooksByBook, upsertMemberBook, getMinutesByBook, addMinutes, getMemberById, updateBook, deleteBook
@@ -16,7 +17,10 @@ export default function BookDetail() {
   const { bookId } = useParams()
   const navigate = useNavigate()
   const user = getCurrentUser()
+  const sync = useSync()
   const [book, setBook] = useState(() => getBookById(bookId))
+
+  useEffect(() => { setBook(getBookById(bookId)) }, [sync, bookId])
   const [showRating, setShowRating] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState(null)

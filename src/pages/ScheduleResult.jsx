@@ -1,4 +1,5 @@
-import { Fragment, useState } from 'react'
+import { useSync } from '../RealtimeProvider'
+import { Fragment, useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getCurrentUser, getMeetingById, getMeetingResponsesByMeeting, getMembersByClub, updateMeeting } from '../storage'
 import Nav from '../components/Nav'
@@ -22,7 +23,9 @@ export default function ScheduleResult() {
   const { meetingId } = useParams()
   const navigate = useNavigate()
   const user = getCurrentUser()
+  const sync = useSync()
   const [meeting, setMeeting] = useState(() => getMeetingById(meetingId))
+  useEffect(() => { setMeeting(getMeetingById(meetingId)) }, [sync, meetingId])
 
   if (!meeting) return <div className="p-6 text-gray-400">일정을 찾을 수 없어요</div>
 

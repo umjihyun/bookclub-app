@@ -1,3 +1,4 @@
+import { useSync } from '../RealtimeProvider'
 import { useNavigate } from 'react-router-dom'
 import { getCurrentUser, getMeetingsByClub, getMeetingResponsesByMeeting, getMembersByClub } from '../storage'
 import Nav from '../components/Nav'
@@ -15,6 +16,7 @@ function fmtHour(h) {
 export default function ScheduleList() {
   const navigate = useNavigate()
   const user = getCurrentUser()
+  useSync()
   const members = getMembersByClub(user.clubId)
   const meetings = getMeetingsByClub(user.clubId).sort((a, b) => b.createdAt - a.createdAt)
 

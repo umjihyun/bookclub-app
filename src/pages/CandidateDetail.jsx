@@ -1,3 +1,4 @@
+import { useSync } from '../RealtimeProvider'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
@@ -10,6 +11,7 @@ export default function CandidateDetail() {
   const { candidateId } = useParams()
   const navigate = useNavigate()
   const user = getCurrentUser()
+  useSync()
   const [cand, setCand] = useState(() => getVoteCandidateById(candidateId))
   const [, forceUpdate] = useState(0)
 

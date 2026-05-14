@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { getCurrentUser } from './storage'
+import { RealtimeProvider } from './RealtimeProvider'
 import Splash from './pages/Splash'
 import Login from './pages/Login'
 import ClubSelect from './pages/ClubSelect'
@@ -41,6 +42,7 @@ function RequireClub({ children }) {
 export default function App() {
   return (
     <BrowserRouter>
+      <RealtimeProvider>
       <Routes>
         <Route path="/" element={<Splash />} />
         <Route path="/login" element={<Login />} />
@@ -66,6 +68,7 @@ export default function App() {
         <Route path="/club/edit" element={<RequireClub><EditClub /></RequireClub>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </RealtimeProvider>
     </BrowserRouter>
   )
 }

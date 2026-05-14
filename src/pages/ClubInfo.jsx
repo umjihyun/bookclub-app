@@ -1,3 +1,4 @@
+import { useSync } from '../RealtimeProvider'
 import { useNavigate } from 'react-router-dom'
 import { getCurrentUser, getClubById, getMembersByClub, getBooksByClub } from '../storage'
 import Nav from '../components/Nav'
@@ -5,6 +6,7 @@ import Nav from '../components/Nav'
 export default function ClubInfo() {
   const navigate = useNavigate()
   const user = getCurrentUser()
+  useSync()
   const club = getClubById(user.clubId)
   const members = getMembersByClub(user.clubId)
   const books = getBooksByClub(user.clubId)

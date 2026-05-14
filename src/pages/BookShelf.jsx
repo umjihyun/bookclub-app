@@ -1,3 +1,4 @@
+import { useSync } from '../RealtimeProvider'
 import { useNavigate } from 'react-router-dom'
 import { getCurrentUser, getBooksByClub, getMemberBook } from '../storage'
 import Nav from '../components/Nav'
@@ -13,6 +14,7 @@ function Stars({ rating }) {
 export default function BookShelf() {
   const navigate = useNavigate()
   const user = getCurrentUser()
+  useSync()
   const books = getBooksByClub(user.clubId).sort((a, b) => b.createdAt - a.createdAt)
 
   return (

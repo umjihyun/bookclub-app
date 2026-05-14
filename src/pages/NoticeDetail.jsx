@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useSync } from '../RealtimeProvider'
 import {
   getCurrentUser, getNoticeById, getMemberById, deleteNotice,
   getCommentsByPost, createComment, deleteComment
@@ -119,9 +120,12 @@ export default function NoticeDetail() {
   const user = getCurrentUser()
   const notice = getNoticeById(noticeId)
 
+  const sync = useSync()
   const [comments, setComments] = useState(() => getCommentsByPost(noticeId))
   const [newComment, setNewComment] = useState('')
   const [replyToId, setReplyToId] = useState(null)
+
+  useEffect(() => { setComments(getCommentsByPost(noticeId)) }, [sync, noticeId])
 
   if (!notice) return <div className="p-6 text-gray-400">게시글을 찾을 수 없어요</div>
 

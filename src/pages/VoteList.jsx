@@ -1,3 +1,4 @@
+import { useSync } from '../RealtimeProvider'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -36,6 +37,7 @@ function CandidateCard({ cand, user, onHeartToggle, onClick }) {
 export default function VoteList() {
   const navigate = useNavigate()
   const user = getCurrentUser()
+  useSync()
   const [, forceUpdate] = useState(0)
 
   let rounds = getVoteRoundsByClub(user.clubId)

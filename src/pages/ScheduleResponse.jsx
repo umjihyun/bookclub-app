@@ -1,3 +1,4 @@
+import { useSync } from '../RealtimeProvider'
 import { Fragment, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getCurrentUser, getMeetingById, getMeetingResponse, upsertMeetingResponse } from '../storage'
@@ -13,6 +14,7 @@ export default function ScheduleResponse() {
   const { meetingId } = useParams()
   const navigate = useNavigate()
   const user = getCurrentUser()
+  useSync()
   const meeting = getMeetingById(meetingId)
 
   const existing = getMeetingResponse(user.memberId, meetingId)

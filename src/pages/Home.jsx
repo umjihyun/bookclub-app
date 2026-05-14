@@ -1,3 +1,4 @@
+import { useSync } from '../RealtimeProvider'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -20,6 +21,7 @@ function HamburgerIcon() {
 export default function Home() {
   const navigate = useNavigate()
   const user = getCurrentUser()
+  useSync()
   const club = getClubById(user.clubId)
   const members = getMembersByClub(user.clubId)
   const books = getBooksByClub(user.clubId)

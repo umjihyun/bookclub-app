@@ -1,3 +1,4 @@
+import { useSync } from '../RealtimeProvider'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCurrentUser, getClubById, getMembersByClub, getBooksByClub, updateClub, updateMemberRole, deleteClub } from '../storage'
@@ -14,6 +15,7 @@ const ROLE_STYLE = {
 export default function EditClub() {
   const navigate = useNavigate()
   const user = getCurrentUser()
+  useSync()
   const club = getClubById(user.clubId)
 
   function handleDeleteClub() {

@@ -1,3 +1,4 @@
+import { useSync } from '../RealtimeProvider'
 import { useNavigate } from 'react-router-dom'
 import { getCurrentUser, getNoticesByClub, getMemberById } from '../storage'
 import Nav from '../components/Nav'
@@ -5,6 +6,7 @@ import Nav from '../components/Nav'
 export default function NoticeList() {
   const navigate = useNavigate()
   const user = getCurrentUser()
+  useSync()
   const all = getNoticesByClub(user.clubId)
 
   const pinned = all.filter(n => n.isNotice)
